@@ -3,7 +3,7 @@ Secure CSE Cyber Security attendance portal featuring geofencing, time-synced to
 # 🎓 GEC WC | Smart Attendance Portal
 ![Security](https://img.shields.io/badge/Security-Geofenced-blue)
 ![Platform](https://img.shields.io/badge/Platform-Google%20Apps%20Script-green)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+<!-- ![License](https://img.shields.io/badge/License-MIT-yellow) -->
 
 A secure, GPS-verified attendance system developed for **GEC WC (CSE Cyber Security)**. This project leverages multi-factor validation to eliminate proxy attendance and automate classroom management.
 
