@@ -148,28 +148,39 @@
                 height: 140px !important;
             }
         }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-8px);
+            }
+
+            75% {
+                transform: translateX(8px);
+            }
+        }
+
+        .animate-shake {
+            animation: shake 0.2s ease-in-out 0s 2;
+            border-color: #ef4444 !important;
+        }
     </style>
 </head>
 
 <body
     class="bg-slate-50 dark:bg-amoled text-slate-900 dark:text-zinc-100 antialiased min-h-screen selection:bg-brandBlue/30 transition-colors duration-300">
 
-    <div id="adminNotice" class="hidden fixed top-20 w-full z-[40] px-4 animate-slide-up">
-        <a id="noticeLink" href="#" target="_blank"
-            class="block max-w-5xl mx-auto bg-brandBlue text-white px-6 py-3 rounded-2xl shadow-xl hover:scale-[1.01] active:scale-[0.98] transition-all border border-blue-400/30 backdrop-blur-md bg-opacity-90">
-            <div class="flex items-center gap-4">
-                <div class="flex-shrink-0 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                    <i id="noticeIcon" class="fas fa-bullhorn animate-bounce"></i>
-                </div>
-                <div class="flex-grow overflow-hidden">
-                    <p id="noticeText" class="font-bold text-sm md:text-base truncate italic"></p>
-                </div>
-                <div class="text-white/60 text-xs font-bold uppercase tracking-widest hidden sm:block">
-                    View <i class="fas fa-chevron-right ml-1"></i>
-                </div>
-            </div>
-        </a>
+    <div id="noticeGrid" class="hidden container mx-auto px-4 pt-24 pb-4 animate-slide-up relative z-[40]">
+        <div id="gridItems" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        </div>
     </div>
+
+
     <div id="notification"
         class="fixed top-4 left-1/2 -translate-x-1/2 z-[3000] opacity-0 pointer-events-none transform -translate-y-2 transition-all duration-300 w-[90%] max-w-sm">
         <div id="notifyContent"
@@ -185,28 +196,57 @@
                         class="premium-logo absolute w-24 h-24 md:w-48 md:h-48 object-contain"
                         onerror="this.src='https://via.placeholder.com/200?text=GEC'">
                 </div>
-
                 <div class="flex flex-col ml-3 md:ml-6">
-                    <span class="text-2xl md:text-4xl font-black tracking-tight uppercase leading-none">GEC<span
-                            class="text-brandBlue">WC</span></span>
                     <span
-                        class="text-[9px] md:text-[12px] font-bold text-slate-400 dark:text-zinc-500 tracking-[0.3em] uppercase mt-1">Smart
-                        Portal</span>
+                        class="text-xl md:text-2xl font-black tracking-tight uppercase leading-none text-slate-900 dark:text-white">GEC<span
+                            class="text-brandBlue">WC</span></span>
+                    <span class="text-[8px] md:text-[10px] font-bold text-slate-400 tracking-[0.2em] uppercase">CSE
+                        Cyber Security</span>
                 </div>
             </div>
 
-            <div class="flex items-center gap-2 md:gap-4">
-                <div id="status-pill"
-                    class="text-[9px] md:text-[10px] font-black uppercase tracking-widest px-2.5 py-1 bg-zinc-100 dark:bg-zinc-900 text-zinc-500 rounded-full border border-zinc-200 dark:border-zinc-800 whitespace-nowrap">
-                    GPS Fix
+            <div class="flex items-center gap-2 md:gap-3">
+                <div onclick="showGPSStatus()"
+                    class="flex items-center gap-2 bg-slate-100 dark:bg-zinc-900 px-2 md:px-3 py-1.5 rounded-full border border-slate-200 dark:border-zinc-800 cursor-pointer active:scale-95 transition-transform">
+                    <div class="relative flex h-2.5 w-2.5">
+                        <span id="gps-ping"
+                            class="hidden absolute inline-flex h-full w-full rounded-full bg-brandGreen opacity-75 animate-ping"></span>
+                        <span id="gps-dot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-400"></span>
+                    </div>
+                    <span id="gps-text"
+                        class="hidden md:block text-[9px] font-black uppercase tracking-widest text-zinc-500">GPS
+                        IDLE</span>
                 </div>
+
+                <button onclick="openHistory(event)"
+                    class="relative w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-blue-400 border border-slate-200 dark:border-zinc-800 transition-all">
+                    <i class="fas fa-bell"></i>
+                    <span id="notif-badge"
+                        class="hidden absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-black"></span>
+                </button>
+
                 <button onclick="toggleTheme()"
-                    class="w-9 h-9 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-yellow-400 border border-slate-200 dark:border-zinc-800 transition-all hover:scale-105 active:scale-95">
+                    class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-yellow-400 border border-slate-200 dark:border-zinc-800 transition-all">
                     <i id="theme-icon" class="fas fa-moon"></i>
                 </button>
             </div>
         </div>
     </nav>
+
+
+    <div id="historyModal"
+        class="hidden fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-white dark:bg-darkSurface w-full max-w-md rounded-[2.5rem] border border-slate-200 dark:border-darkBorder shadow-2xl overflow-hidden">
+            <div class="p-6 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center">
+                <h3 class="font-black text-xl tracking-tight dark:text-white">Notice Center</h3>
+                <button onclick="closeHistory()" class="text-slate-400 hover:text-brandRed transition-colors">
+                    <i class="fas fa-times-circle text-2xl"></i>
+                </button>
+            </div>
+            <div id="historyList" class="max-h-[60vh] overflow-y-auto p-4 space-y-3"></div>
+        </div>
+    </div>
 
     <main class="container mx-auto max-w-5xl pt-32 md:pt-48 pb-10 px-4 md:px-6">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
@@ -252,7 +292,7 @@
 
                     <div class="absolute top-0 right-0 p-6 z-20">
                         <div
-                            class="bg-brandBlue/10 dark:bg-brandBlue/20 border border-brandBlue/30 text-brandBlue px-4 py-1 rounded-full font-black text-xs tracking-widest uppercase">
+                            class="bg-brandBlue/10 dark:bg-brandBlue/20 border border-brandBlue/30 text-brandBlue px-2 py-1 rounded-full font-black text-xs tracking-widest uppercase">
                             Room no:60
                         </div>
                     </div>
@@ -286,16 +326,17 @@
                                 <label for="reg" class="input-label label-required">Registration No. *</label>
                             </div>
 
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 gap-4">
+                                <div class="input-group">
+                                    <input type="email" id="email" name="email" class="input-field peer" placeholder=" "
+                                        required onfocus="primeHaptics()">
+                                    <label for="email" class="input-label label-required">Email Address *</label>
+                                </div>
+
                                 <div class="input-group">
                                     <input type="tel" id="mobile" name="mobile" class="input-field peer" placeholder=" "
                                         onfocus="primeHaptics()">
                                     <label for="mobile" class="input-label label-optional">Mobile (Optional)</label>
-                                </div>
-                                <div class="input-group">
-                                    <input type="email" id="email" name="email" class="input-field peer" placeholder=" "
-                                        onfocus="primeHaptics()">
-                                    <label for="email" class="input-label label-optional">Email (Optional)</label>
                                 </div>
                             </div>
 
@@ -305,11 +346,34 @@
                                 <label for="note" class="input-label label-optional">Special Note (Optional)</label>
                             </div>
                         </div>
+                        <div
+                            class="bg-slate-50 dark:bg-zinc-900/50 p-4 rounded-3xl border border-slate-100 dark:border-zinc-800 mb-6">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-brandBlue">Security
+                                    PIN</span>
+                                <span id="pin-timer" class="text-[10px] font-bold text-slate-400">Refreshes in:
+                                    --:--</span>
+                            </div>
 
-                        <button type="submit" id="submitBtn"
-                            class="w-full bg-brandBlue hover:bg-blue-600 text-white py-5 rounded-2xl font-black text-lg shadow-[0_10px_25px_rgba(37,99,235,0.3)] active:scale-[0.97] transition-all flex items-center justify-center gap-3">
+                            <div class="flex items-center gap-3">
+                                <div id="pinDisplay"
+                                    class="bg-white dark:bg-black px-4 py-3 rounded-2xl font-black text-2xl text-brandBlue border-2 border-dashed border-brandBlue/30 select-none animate-pulse">
+                                    ----
+                                </div>
+
+                                <div class="flex-grow relative">
+                                    <input type="text" id="userPinInput" maxlength="4"
+                                        class="input-field !mb-0 text-center font-bold tracking-[0.5em]"
+                                        placeholder="TYPE PIN" autocomplete="off">
+                                </div>
+                            </div>
+                            <p class="text-[9px] text-slate-400 mt-2 text-center font-medium uppercase">Enter the code
+                                shown on the left to verify presence</p>
+                        </div>
+                        <button type="submit" id="submitBtn" disabled
+                            class="w-full bg-brandBlue opacity-50 cursor-not-allowed text-white py-5 rounded-2xl font-black text-lg shadow-lg transition-all flex items-center justify-center gap-3">
                             <span>MARK ATTENDANCE</span>
-                            <i class="fas fa-check-circle"></i>
+                            <i class="fas fa-lock" id="btn-lock-icon"></i>
                         </button>
                     </form>
 
@@ -327,6 +391,23 @@
                 </div>
             </div>
         </div>
+        <div class="lg:col-span-12 mt-8">
+            <div
+                class="bg-white dark:bg-darkSurface p-6 rounded-[2.5rem] border border-slate-200 dark:border-darkBorder shadow-lg">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="font-black text-xl tracking-tight"><i class="fas fa-history mr-2 text-brandBlue"></i>
+                        Your Recent Logs</h3>
+                    <button onclick="clearMyHistory()"
+                        class="text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-brandRed transition-colors">Clear
+                        History</button>
+                </div>
+                <div id="localLogsList" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <p id="noLogsMsg"
+                        class="col-span-full text-center py-10 text-slate-400 italic text-sm border-2 border-dashed border-slate-100 dark:border-zinc-800 rounded-3xl">
+                        No check-ins recorded on this device yet.</p>
+                </div>
+            </div>
+        </div>
     </main>
 
     <script>
@@ -338,7 +419,7 @@
         let userPos = { lat: 0, lon: 0 };
         let wasInRange = false;
         let hapticsPrimed = false;
-
+        let allNotices = [];
 
         async function fetchAdminNotice() {
             try {
@@ -347,29 +428,216 @@
                     body: JSON.stringify({ action: "getNotice" })
                 });
                 const data = await res.json();
+                const notices = data.notices || [];
 
-                if (data.show && data.msg) {
-                    document.getElementById('noticeText').innerText = data.msg;
-                    document.getElementById('adminNotice').classList.remove('hidden');
+                if (notices.length > 0) {
+                    const gridContainer = document.getElementById('noticeGrid');
+                    const gridItems = document.getElementById('gridItems');
 
-                    // Set the Link
-                    const linkEl = document.getElementById('noticeLink');
-                    if (data.link) {
-                        linkEl.href = data.link;
-                        linkEl.style.pointerEvents = 'auto';
-                    } else {
-                        linkEl.style.pointerEvents = 'none';
-                    }
+                    gridContainer.classList.remove('hidden');
+                    gridItems.innerHTML = '';
 
-                    // Set the Icon (e.g., fa-file-pdf)
-                    if (data.icon) {
-                        document.getElementById('noticeIcon').className = `fas fa-${data.icon} animate-bounce`;
-                    }
+                    notices.forEach((n, index) => {
+                        // Check if user already dismissed this specific message
+                        if (sessionStorage.getItem('dismissed_' + btoa(n.msg).substring(0, 16))) return;
+
+                        const card = document.createElement('div');
+                        card.id = `notice-${index}`;
+                        card.className = "relative bg-white dark:bg-darkSurface border border-slate-200 dark:border-zinc-800 p-5 rounded-3xl shadow-lg flex flex-col gap-3 transition-all duration-300 hover:shadow-xl";
+
+                        card.innerHTML = `
+                            <button onclick="dismissNotice('${card.id}', '${btoa(n.msg).substring(0, 16)}')" 
+                                    class="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-400 hover:text-brandRed transition-colors">
+                                <i class="fas fa-times text-xs"></i>
+                            </button>
+
+                            <div class="flex items-center gap-3 pr-6">
+                                <div class="w-10 h-10 rounded-2xl bg-brandBlue/10 flex items-center justify-center text-brandBlue">
+                                    <i class="fas fa-${n.icon} text-lg"></i>
+                                </div>
+                                <span class="text-[10px] font-black uppercase tracking-widest text-brandBlue">New Update</span>
+                            </div>
+
+                            <p class="text-sm font-bold text-slate-900 dark:text-white leading-relaxed pr-4">${n.msg}</p>
+                            
+                            ${n.link !== "#" ? `
+                                <a href="${n.link}" target="_blank" class="mt-2 inline-flex items-center gap-2 text-[11px] font-black text-brandBlue uppercase tracking-tighter hover:gap-3 transition-all">
+                                    View Attachment <i class="fas fa-arrow-right"></i>
+                                </a>
+                            ` : ''}
+                        `;
+                        gridItems.appendChild(card);
+                    });
+
+                  
+                    if (gridItems.children.length === 0) gridContainer.classList.add('hidden');
+
+             
+                    if (notices.length > 0) document.getElementById('notif-badge')?.classList.remove('hidden');
+
+       
+                    renderHistoryModal(notices);
                 }
             } catch (err) { console.warn("Notice fetch failed"); }
         }
+
+        function dismissNotice(cardId, storageKey) {
+            const card = document.getElementById(cardId);
+            // Animation for dismissal
+            card.style.transform = "scale(0.9) translateY(-10px)";
+            card.style.opacity = "0";
+
+            setTimeout(() => {
+                card.remove();
+                sessionStorage.setItem('dismissed_' + storageKey, 'true');
+
+                // If no cards left, hide the grid container
+                const gridItems = document.getElementById('gridItems');
+                if (gridItems.children.length === 0) {
+                    document.getElementById('noticeGrid').classList.add('hidden');
+                }
+            }, 3000);
+        }
+
+        function renderHistoryModal(notices) {
+            const list = document.getElementById('historyList');
+            if (!list) return;
+            list.innerHTML = '';
+            notices.forEach(n => {
+                const item = document.createElement('div');
+                item.className = "p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800 flex items-start gap-4";
+                item.innerHTML = `
+                    <div class="mt-1 text-brandBlue"><i class="fas fa-${n.icon}"></i></div>
+                    <div>
+                        <p class="text-sm font-bold">${n.msg}</p>
+                        ${n.link !== "#" ? `<a href="${n.link}" target="_blank" class="text-[10px] text-brandBlue font-bold uppercase mt-1 inline-block">Link <i class="fas fa-external-link-alt"></i></a>` : ''}
+                    </div>`;
+                list.appendChild(item);
+            });
+        }
+
+        // Modal Control Functions
+        function openHistory(e) {
+            if (e) e.preventDefault();
+            document.getElementById('historyModal').classList.remove('hidden');
+        }
+
+        function closeHistory() {
+            document.getElementById('historyModal').classList.add('hidden');
+        }
+
+        function openHistory(e) { if (e) e.preventDefault(); document.getElementById('historyModal').classList.remove('hidden'); }
+        function closeHistory() { document.getElementById('historyModal').classList.add('hidden'); }
+
+        function showGPSStatus() {
+            const statusText = document.getElementById('gps-text').innerText;
+            const isError = statusText.includes("ERROR") || statusText.includes("IDLE");
+
+            showNotify(`GPS Status: ${statusText}`, isError ? 'error' : 'success');
+            if ("vibrate" in navigator) navigator.vibrate(30);
+        }
+
+
+        function showGPSStatus() {
+            const statusText = document.getElementById('gps-text').innerText;
+            const isError = statusText.includes("ERROR") || statusText.includes("IDLE");
+            showNotify(`GPS Status: ${statusText}`, isError ? 'error' : 'success');
+            if ("vibrate" in navigator) navigator.vibrate(20);
+        }
+
+        // Load logs from phone memory and display them
+        function renderLocalLogs() {
+            const list = document.getElementById('localLogsList');
+            const noLogsMsg = document.getElementById('noLogsMsg');
+            const logs = JSON.parse(localStorage.getItem('my_attendance_history') || "[]");
+
+            if (logs.length === 0) {
+                noLogsMsg.classList.remove('hidden');
+                return;
+            }
+
+            noLogsMsg.classList.add('hidden');
+            list.querySelectorAll('.log-card').forEach(el => el.remove());
+
+            logs.slice(-3).reverse().forEach((log, index) => {
+                const card = document.createElement('div');
+                card.className = "log-card p-5 rounded-3xl bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800 animate-slide-up relative group";
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-[9px] font-black text-brandGreen bg-brandGreen/10 px-2 py-0.5 rounded-full uppercase">Verified</span>
+                        <span class="text-[10px] text-slate-400 font-medium">${log.time}</span>
+                    </div>
+                    <p class="text-sm font-bold text-slate-900 dark:text-white truncate">${log.name}</p>
+                    <p class="text-[10px] text-slate-500 mb-4 uppercase tracking-wider">Roll: ${log.roll} • Room: ${log.room}</p>
+                    
+                    <button onclick="shareReceipt('${log.name}', '${log.roll}', '${log.time}', '${log.room}')" 
+                            class="w-full py-2 bg-brandBlue/10 hover:bg-brandBlue text-brandBlue hover:text-white text-[10px] font-bold rounded-xl transition-all uppercase tracking-widest flex items-center justify-center gap-2">
+                        <i class="fas fa-share-nodes"></i> Share Receipt
+                    </button>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        // The Sharing Function
+        async function shareReceipt(name, roll, time, room) {
+            const shareData = {
+                title: 'Attendance Receipt',
+                text: `✅ *Attendance Verified*\n\n👤 Name: ${name}\n🆔 Roll: ${roll}\n📍 Room: ${room}\n⏰ Time: ${time}\n\n_Generated by GEC WC Smart Portal_`,
+            };
+
+            try {
+                if (navigator.share) {
+                    await navigator.share(shareData);
+                } else {
+                    // Fallback: Copy to clipboard if sharing is not supported
+                    await navigator.clipboard.writeText(shareData.text);
+                    showNotify("Receipt copied to clipboard!", "success");
+                }
+            } catch (err) {
+                console.log("Sharing failed", err);
+            }
+        }
+
+        // Add a new log to memory
+        function saveLogLocally(name, roll, room) {
+            const logs = JSON.parse(localStorage.getItem('my_attendance_history') || "[]");
+            const newLog = {
+                name: name,
+                roll: roll,
+                room: room,
+                time: new Date().toLocaleString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })
+            };
+            logs.push(newLog);
+            localStorage.setItem('my_attendance_history', JSON.stringify(logs));
+            renderLocalLogs();
+        }
+
+
+        function clearMyHistory() {
+            document.getElementById('clearConfirmModal').classList.remove('hidden');
+            if ("vibrate" in navigator) navigator.vibrate(50);
+        }
+
+
+        function closeClearModal() {
+            document.getElementById('clearConfirmModal').classList.add('hidden');
+        }
+
+
+        function executeClearHistory() {
+            localStorage.removeItem('my_attendance_history');
+            closeClearModal();
+            renderLocalLogs(); // Refreshes the UI to show "No logs"
+            showNotify("History cleared successfully", "success");
+            if ("vibrate" in navigator) navigator.vibrate([50, 30, 50]);
+        }
+
+
+        renderLocalLogs();
+
         fetchAdminNotice();
-        // --- NEW: TIME TOKEN GENERATOR ---
+        //  TIME TOKEN GENERATOR ---
         function generateToken() {
             const now = new Date();
             const timeStr = now.getHours().toString() + now.getMinutes().toString();
@@ -436,9 +704,17 @@
             userPos.lat = pos.coords.latitude;
             userPos.lon = pos.coords.longitude;
 
-            const pill = document.getElementById('status-pill');
-            pill.innerText = "GPS ACTIVE";
-            pill.className = "text-[9px] md:text-[10px] font-black uppercase tracking-widest px-2.5 py-1 bg-brandGreen/10 text-brandGreen rounded-full border border-brandGreen/20 whitespace-nowrap";
+
+
+            const dot = document.getElementById('gps-dot');
+            const ping = document.getElementById('gps-ping');
+            const txt = document.getElementById('gps-text');
+
+            dot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-brandGreen";
+            ping.classList.remove('hidden');
+            txt.innerText = "GPS ACTIVE";
+            txt.className = "hidden md:block text-[9px] font-black uppercase tracking-widest text-brandGreen";
+
 
             if (!userMarker) {
                 userMarker = L.circleMarker([userPos.lat, userPos.lon], {
@@ -448,6 +724,7 @@
             } else {
                 userMarker.setLatLng([userPos.lat, userPos.lon]);
             }
+
 
             const dist = calculateDistance(userPos.lat, userPos.lon, CLASS_COORDS.lat, CLASS_COORDS.lng);
             const isAllowed = dist <= MAX_DIST;
@@ -459,9 +736,10 @@
             const bar = document.getElementById('distBar');
             const tag = document.getElementById('range-tag');
 
+
             if (isAllowed) {
                 bar.className = "dist-gauge h-full bg-brandGreen";
-                tag.innerText = "IN GEC WC RANGE";
+                tag.innerText = "IN CLASS  RANGE";
                 tag.className = "text-[10px] font-bold px-2 py-0.5 rounded-md bg-brandGreen/10 text-brandGreen border border-brandGreen/20";
                 document.getElementById('lockMessage').style.display = 'none';
                 document.getElementById('entryForm').classList.remove('hidden');
@@ -478,7 +756,18 @@
                 document.getElementById('entryForm').classList.add('hidden');
                 wasInRange = false;
             }
-        }, null, { enableHighAccuracy: true });
+        }, (err) => {
+            const dot = document.getElementById('gps-dot');
+            const ping = document.getElementById('gps-ping');
+            const txt = document.getElementById('gps-text');
+
+            dot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-brandRed";
+            ping.classList.add('hidden');
+            txt.innerText = "GPS ERROR";
+            txt.className = "hidden md:block text-[9px] font-black uppercase tracking-widest text-brandRed";
+
+            console.warn("GPS Access Denied or Timed Out");
+        }, { enableHighAccuracy: true });
 
 
         document.getElementById('roll').addEventListener('blur', async (e) => {
@@ -494,7 +783,7 @@
                 document.getElementById('email').value = savedData.email || "";
             }
 
-            // 2. Network verification with Google Sheet
+            // 2. Network verification 
             try {
                 const res = await fetch(SCRIPT_URL, {
                     method: 'POST',
@@ -522,7 +811,9 @@
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const payload = {
                     action: "submit",
+                    dynamicPin: document.getElementById('userPinInput').value,
                     token: generateToken(),
+
                     type: 'classroom',
                     roll: document.getElementById('roll').value,
                     name: document.getElementById('name').value,
@@ -544,7 +835,19 @@
                     if (result.success) {
                         if ("vibrate" in navigator) navigator.vibrate(300);
                         showNotify("Verified & Marked Successfully!", "success");
+
+                        const context = new (window.AudioContext || window.webkitAudioContext)();
+                        const osc = context.createOscillator();
+                        const gain = context.createGain();
+                        osc.type = "sine";
+                        osc.frequency.setValueAtTime(880, context.currentTime); // A5 note
+                        osc.connect(gain);
+                        gain.connect(context.destination);
+                        gain.gain.setValueAtTime(0.1, context.currentTime);
+                        osc.start();
+                        osc.stop(context.currentTime + 0.1);
                         setTimeout(() => location.reload(), 2500);
+                        saveLogLocally(payload.name, payload.roll, payload.room);
                     } else {
                         // This will show the "SERVER BLOCKED" message if they try to hack it
                         showNotify(result.error || "Submission Failed", "error");
@@ -579,7 +882,113 @@
             }
             return id;
         }
+
+        function generate5MinPIN() {
+            const now = new Date();
+            const day = now.getDate();
+            const hour = now.getHours();
+            const minuteBlock = Math.floor(now.getMinutes() / 5);
+
+
+            const pin = Math.abs(((day * 127) + (hour * 13) + (minuteBlock * 57) + 1234) % 10000);
+            return pin.toString().padStart(4, '0');
+        }
+
+        // 2. Update UI and Timer
+        function updatePINSystem() {
+            const currentPin = generate5MinPIN();
+            const display = document.getElementById('pinDisplay');
+            const timerText = document.getElementById('pin-timer');
+
+            display.innerText = currentPin;
+
+            const now = new Date();
+            const secToNextBlock = 300 - ((now.getMinutes() % 5) * 60 + now.getSeconds());
+            const mins = Math.floor(secToNextBlock / 60);
+            const secs = secToNextBlock % 60;
+            timerText.innerText = `Refreshes in: ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+
+        setInterval(updatePINSystem, 1000);
+        updatePINSystem();
+
+
+        function validatePinInput() {
+            const btn = document.getElementById('submitBtn');
+            const icon = document.getElementById('btn-lock-icon');
+            const input = document.getElementById('userPinInput');
+            const currentPin = generate5MinPIN();
+
+            if (input.value === currentPin) {
+                // UNLOCK STATE
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-brandBlue');
+                btn.classList.add('bg-brandGreen', 'hover:bg-green-600');
+                icon.className = "fas fa-check-circle";
+                input.classList.remove('animate-shake', 'border-brandRed');
+                input.classList.add('border-brandGreen');
+            } else {
+                // LOCK STATE
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                btn.classList.remove('bg-brandGreen', 'hover:bg-green-600');
+                btn.classList.add('bg-brandBlue');
+                icon.className = "fas fa-lock";
+                input.classList.remove('border-brandGreen');
+
+                // Trigger Shake & Vibrate if 4 wrong digits are typed
+                if (input.value.length === 4) {
+                    input.classList.add('animate-shake');
+                    if ("vibrate" in navigator) navigator.vibrate([100, 50, 100]);
+                    setTimeout(() => input.classList.remove('animate-shake'), 400);
+                }
+            }
+        }
+
+
+        document.getElementById('userPinInput').addEventListener('input', validatePinInput);
     </script>
+
+    <div id="historyModal"
+        class="hidden fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-white dark:bg-darkSurface w-full max-w-md rounded-[2.5rem] border border-slate-200 dark:border-darkBorder shadow-2xl overflow-hidden animate-slide-up">
+            <div class="p-6 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center">
+                <h3 class="font-black text-xl tracking-tight text-slate-900 dark:text-white">Notice History</h3>
+                <button onclick="closeHistory()" class="text-slate-400 hover:text-brandRed transition-colors">
+                    <i class="fas fa-times-circle text-2xl"></i>
+                </button>
+            </div>
+            <div id="historyList" class="max-h-[60vh] overflow-y-auto p-4 space-y-3">
+                <p class="text-center text-slate-400 py-10">No older notifications.</p>
+            </div>
+        </div>
+    </div>
+    <div id="clearConfirmModal"
+        class="hidden fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-white dark:bg-darkSurface w-full max-w-xs rounded-[2.5rem] border border-slate-200 dark:border-darkBorder shadow-2xl p-8 text-center animate-slide-up">
+            <div
+                class="w-16 h-16 bg-brandRed/10 text-brandRed rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-trash-alt text-2xl"></i>
+            </div>
+            <h3 class="font-black text-xl mb-2 text-slate-900 dark:text-white">Clear History?</h3>
+            <p class="text-slate-500 dark:text-zinc-400 text-xs mb-8">This will delete your local logs permanently. This
+                action cannot be undone.</p>
+
+            <div class="flex flex-col gap-3">
+                <button onclick="executeClearHistory()"
+                    class="w-full bg-brandRed text-white py-4 rounded-2xl font-black text-sm shadow-lg shadow-brandRed/20 active:scale-95 transition-all">
+                    YES, DELETE ALL
+                </button>
+                <button onclick="closeClearModal()"
+                    class="w-full bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 py-4 rounded-2xl font-black text-sm active:scale-95 transition-all">
+                    CANCEL
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
