@@ -330,6 +330,16 @@
     </main>
 
     <script>
+
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyrwZsXdVRvz1kOmBu9WeVu7lwSbNaKJB8PgfvX1jCFEwgck-QMLgjoKJOUm1--0dr_CQ/exec";
+        const CLASS_COORDS = { lat: 26.873095, lng: 84.509599 };
+        const MAX_DIST = 25;
+
+        let userPos = { lat: 0, lon: 0 };
+        let wasInRange = false;
+        let hapticsPrimed = false;
+
+
         async function fetchAdminNotice() {
             try {
                 const res = await fetch(SCRIPT_URL, {
@@ -348,7 +358,7 @@
                         linkEl.href = data.link;
                         linkEl.style.pointerEvents = 'auto';
                     } else {
-                        linkEl.style.pointerEvents = 'none'; 
+                        linkEl.style.pointerEvents = 'none';
                     }
 
                     // Set the Icon (e.g., fa-file-pdf)
@@ -359,14 +369,6 @@
             } catch (err) { console.warn("Notice fetch failed"); }
         }
         fetchAdminNotice();
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzZk0zoEVi1imw7uovc3zib34AM0KwauQD_GxG7plU1xmMO9ynUPUT1aiyQmzR0wEqv/exec";
-        const CLASS_COORDS = { lat: 26.873095, lng: 84.509599 };
-        const MAX_DIST = 25;
-
-        let userPos = { lat: 0, lon: 0 };
-        let wasInRange = false;
-        let hapticsPrimed = false;
-
         // --- NEW: TIME TOKEN GENERATOR ---
         function generateToken() {
             const now = new Date();
