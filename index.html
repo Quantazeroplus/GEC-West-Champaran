@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>GEC WC | Smart Attendance</title>
+    <link rel="icon" type="image/png" href="image/logo.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -218,6 +219,17 @@
                         IDLE</span>
                 </div>
 
+                <div id="qr-status"
+                    class="hidden flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-full border border-blue-100 dark:border-blue-800">
+                    <div class="relative flex h-2 w-2">
+                        <span
+                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                    </div>
+                    <span class="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">QR
+                        VERIFIED</span>
+                </div>
+
                 <button onclick="openHistory(event)"
                     class="relative w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-blue-400 border border-slate-200 dark:border-zinc-800 transition-all">
                     <i class="fas fa-bell"></i>
@@ -416,10 +428,33 @@
         const CLASS_COORDS = { lat: 26.873095, lng: 84.509599 };
         const MAX_DIST = 25;
 
+        const PERMANENT_KEY = "GECWC2026";
+
+        function checkQRVerification() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const scannedKey = urlParams.get('vault');
+
+            if (scannedKey === PERMANENT_KEY) {
+
+                localStorage.setItem('qr_verified_at', Date.now());
+
+                window.history.replaceState({}, document.title, window.location.pathname);
+                return true;
+            }
+
+            // Check if they scanned recently
+            const lastScan = localStorage.getItem('qr_verified_at');
+            if (lastScan && (Date.now() - lastScan < 7200000)) {
+                return true;
+            }
+            return false;
+        }
         let userPos = { lat: 0, lon: 0 };
         let wasInRange = false;
         let hapticsPrimed = false;
         let allNotices = [];
+        let securityDisplayMode = "GPS"; // Switch for alternating messages
+        let lastLockMessage = "";
 
         async function fetchAdminNotice() {
             try {
@@ -469,13 +504,13 @@
                         gridItems.appendChild(card);
                     });
 
-                  
+
                     if (gridItems.children.length === 0) gridContainer.classList.add('hidden');
 
-             
+
                     if (notices.length > 0) document.getElementById('notif-badge')?.classList.remove('hidden');
 
-       
+
                     renderHistoryModal(notices);
                 }
             } catch (err) { console.warn("Notice fetch failed"); }
@@ -704,18 +739,15 @@
             userPos.lat = pos.coords.latitude;
             userPos.lon = pos.coords.longitude;
 
-
-
+            // 1. GPS INDICATORS
             const dot = document.getElementById('gps-dot');
             const ping = document.getElementById('gps-ping');
             const txt = document.getElementById('gps-text');
-
             dot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-brandGreen";
             ping.classList.remove('hidden');
             txt.innerText = "GPS ACTIVE";
-            txt.className = "hidden md:block text-[9px] font-black uppercase tracking-widest text-brandGreen";
 
-
+            // 2. MAP & MARKER
             if (!userMarker) {
                 userMarker = L.circleMarker([userPos.lat, userPos.lon], {
                     radius: 9, color: '#2563eb', fillColor: '#2563eb', fillOpacity: 1
@@ -725,50 +757,78 @@
                 userMarker.setLatLng([userPos.lat, userPos.lon]);
             }
 
-
+            // 3. SECURITY & DISTANCE CALCULATIONS
             const dist = calculateDistance(userPos.lat, userPos.lon, CLASS_COORDS.lat, CLASS_COORDS.lng);
-            const isAllowed = dist <= MAX_DIST;
+            const isScanned = checkQRVerification();
 
+            // 4. UPDATE GAUGE UI
             document.getElementById('liveDist').innerHTML = `${Math.round(dist)}<span class="text-xl font-medium text-slate-400 dark:text-zinc-600 ml-1">m</span>`;
             const percentage = Math.max(0, 100 - (dist * (100 / MAX_DIST)));
             document.getElementById('distBar').style.width = `${percentage}%`;
 
             const bar = document.getElementById('distBar');
             const tag = document.getElementById('range-tag');
+            const lockMsg = document.getElementById('lockMessage');
+            const entryForm = document.getElementById('entryForm');
 
-
-            if (isAllowed) {
+            // 5. PRIORITY LOGIC
+            if (dist <= MAX_DIST && isScanned) {
+                // SUCCESS: In Range + Scanned
                 bar.className = "dist-gauge h-full bg-brandGreen";
-                tag.innerText = "IN CLASS  RANGE";
+                tag.innerText = "IN CLASS RANGE";
                 tag.className = "text-[10px] font-bold px-2 py-0.5 rounded-md bg-brandGreen/10 text-brandGreen border border-brandGreen/20";
-                document.getElementById('lockMessage').style.display = 'none';
-                document.getElementById('entryForm').classList.remove('hidden');
+
+                lockMsg.style.display = 'none';
+                entryForm.classList.remove('hidden');
+                lastLockMessage = ""; // Reset
 
                 if (!wasInRange) {
-                    if ("vibrate" in navigator) navigator.vibrate([100, 50, 100]);
+                    if ("vibrate" in navigator) navigator.vibrate([100, 50, 100]); // SUCCESS HAPTIC
                     wasInRange = true;
                 }
             } else {
-                bar.className = "dist-gauge h-full bg-brandRed";
-                tag.innerText = "OUT OF RANGE";
-                tag.className = "text-[10px] font-bold px-2 py-0.5 rounded-md bg-brandRed/10 text-brandRed border border-brandRed/20";
-                document.getElementById('lockMessage').style.display = 'block';
-                document.getElementById('entryForm').classList.add('hidden');
+                // LOCKED STATE
+                entryForm.classList.add('hidden');
+                lockMsg.style.display = 'block';
                 wasInRange = false;
+
+                let newMessage = "";
+
+                if (dist > MAX_DIST) {
+                    // ERROR 1: OUT OF RANGE (Priority)
+                    bar.className = "dist-gauge h-full bg-brandRed";
+                    tag.innerText = "OUT OF RANGE";
+                    tag.className = "text-[10px] font-bold px-2 py-0.5 rounded-md bg-brandRed/10 text-brandRed border border-brandRed/20";
+
+                    newMessage = `
+                        <div class="flex flex-col items-center animate-slide-up">
+                            <i class="fas fa-location-dot text-brandRed text-4xl mb-3"></i>
+                            <p class="text-brandRed font-black text-xl uppercase tracking-tighter">Access Denied</p>
+                            <p class="text-slate-500 dark:text-zinc-400 text-sm mt-1">Move closer to Room 60 (Distance: ${Math.round(dist)}m)</p>
+                        </div>`;
+                } else {
+                    // ERROR 2: IN RANGE BUT NOT SCANNED
+                    bar.className = "dist-gauge h-full bg-brandGreen"; // Location is good
+                    tag.innerText = "LOCATION VERIFIED";
+                    tag.className = "text-[10px] font-bold px-2 py-0.5 rounded-md bg-brandGreen/10 text-brandGreen border border-brandGreen/20";
+
+                    newMessage = `
+                        <div class="flex flex-col items-center animate-slide-up">
+                            <i class="fas fa-qrcode text-brandBlue text-4xl mb-3 animate-pulse"></i>
+                            <p class="text-brandBlue font-black text-xl uppercase tracking-tighter">Scan Required</p>
+                            <p class="text-slate-500 dark:text-zinc-400 text-sm mt-1">Scan the paper QR in Room 60 to unlock the form.</p>
+                        </div>`;
+                }
+
+                // ANTI-BLINK: Only update HTML if message changed
+                if (lastLockMessage !== newMessage) {
+                    lockMsg.innerHTML = newMessage;
+                    lastLockMessage = newMessage;
+                }
             }
         }, (err) => {
-            const dot = document.getElementById('gps-dot');
-            const ping = document.getElementById('gps-ping');
-            const txt = document.getElementById('gps-text');
-
-            dot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-brandRed";
-            ping.classList.add('hidden');
-            txt.innerText = "GPS ERROR";
-            txt.className = "hidden md:block text-[9px] font-black uppercase tracking-widest text-brandRed";
-
-            console.warn("GPS Access Denied or Timed Out");
+            console.warn("GPS ERROR");
         }, { enableHighAccuracy: true });
-
 
         document.getElementById('roll').addEventListener('blur', async (e) => {
             const roll = e.target.value.trim();
