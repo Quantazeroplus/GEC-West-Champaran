@@ -735,29 +735,19 @@
 
         let userMarker;
 
-  // --- GPS INITIALIZATION & WATCHER ---
-const startGPS = () => {
-    const txt = document.getElementById('gps-text');
-    const dot = document.getElementById('gps-dot');
-    const ping = document.getElementById('gps-ping');
-
-    txt.innerText = "WAKING GPS...";
-
-    navigator.geolocation.getCurrentPosition((firstPos) => {
-        console.log("GPS Warmed Up");
-        
-        // SECOND: Start continuous tracking
         navigator.geolocation.watchPosition((pos) => {
             userPos.lat = pos.coords.latitude;
             userPos.lon = pos.coords.longitude;
 
-            // Update Navbar UI
+            // 1. GPS INDICATORS
+            const dot = document.getElementById('gps-dot');
+            const ping = document.getElementById('gps-ping');
+            const txt = document.getElementById('gps-text');
             dot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-brandGreen";
             ping.classList.remove('hidden');
             txt.innerText = "GPS ACTIVE";
-            txt.className = "hidden md:block text-[9px] font-black uppercase tracking-widest text-brandGreen";
 
-            // Update Map Marker (Restores your original feature)
+            // 2. MAP & MARKER
             if (!userMarker) {
                 userMarker = L.circleMarker([userPos.lat, userPos.lon], {
                     radius: 9, color: '#2563eb', fillColor: '#2563eb', fillOpacity: 1
@@ -767,12 +757,11 @@ const startGPS = () => {
                 userMarker.setLatLng([userPos.lat, userPos.lon]);
             }
 
-            // Security Calculations
+            // 3. SECURITY & DISTANCE CALCULATIONS
             const dist = calculateDistance(userPos.lat, userPos.lon, CLASS_COORDS.lat, CLASS_COORDS.lng);
             const isScanned = checkQRVerification();
-            const isAllowed = (dist <= MAX_DIST) && isScanned;
 
-            // Update Distance UI & Gauge
+            // 4. UPDATE GAUGE UI
             document.getElementById('liveDist').innerHTML = `${Math.round(dist)}<span class="text-xl font-medium text-slate-400 dark:text-zinc-600 ml-1">m</span>`;
             const percentage = Math.max(0, 100 - (dist * (100 / MAX_DIST)));
             document.getElementById('distBar').style.width = `${percentage}%`;
@@ -782,56 +771,64 @@ const startGPS = () => {
             const lockMsg = document.getElementById('lockMessage');
             const entryForm = document.getElementById('entryForm');
 
-            // Unlock/Lock Decision with Haptics
-            if (isAllowed) {
+            // 5. PRIORITY LOGIC
+            if (dist <= MAX_DIST && isScanned) {
+                // SUCCESS: In Range + Scanned
                 bar.className = "dist-gauge h-full bg-brandGreen";
                 tag.innerText = "IN CLASS RANGE";
                 tag.className = "text-[10px] font-bold px-2 py-0.5 rounded-md bg-brandGreen/10 text-brandGreen border border-brandGreen/20";
+
                 lockMsg.style.display = 'none';
                 entryForm.classList.remove('hidden');
+                lastLockMessage = ""; // Reset
 
                 if (!wasInRange) {
-                    if ("vibrate" in navigator) navigator.vibrate([100, 50, 100]); // Haptics restored
+                    if ("vibrate" in navigator) navigator.vibrate([100, 50, 100]); // SUCCESS HAPTIC
                     wasInRange = true;
                 }
             } else {
+                // LOCKED STATE
                 entryForm.classList.add('hidden');
                 lockMsg.style.display = 'block';
                 wasInRange = false;
 
+                let newMessage = "";
+
                 if (dist > MAX_DIST) {
+                    // ERROR 1: OUT OF RANGE (Priority)
                     bar.className = "dist-gauge h-full bg-brandRed";
                     tag.innerText = "OUT OF RANGE";
                     tag.className = "text-[10px] font-bold px-2 py-0.5 rounded-md bg-brandRed/10 text-brandRed border border-brandRed/20";
-                    lockMsg.innerHTML = `
+
+                    newMessage = `
                         <div class="flex flex-col items-center animate-slide-up">
                             <i class="fas fa-location-dot text-brandRed text-4xl mb-3"></i>
-                            <p class="text-brandRed font-black text-lg uppercase">Access Denied</p>
-                            <p class="text-slate-500 text-xs mt-1 text-center">Distance: ${Math.round(dist)}m. Move to Room 60.</p>
+                            <p class="text-brandRed font-black text-xl uppercase tracking-tighter">Access Denied</p>
+                            <p class="text-slate-500 dark:text-zinc-400 text-sm mt-1">Move closer to Room 60 (Distance: ${Math.round(dist)}m)</p>
                         </div>`;
                 } else {
-                    // In range but missing QR scan
-                    lockMsg.innerHTML = `
+                    // ERROR 2: IN RANGE BUT NOT SCANNED
+                    bar.className = "dist-gauge h-full bg-brandGreen"; // Location is good
+                    tag.innerText = "LOCATION VERIFIED";
+                    tag.className = "text-[10px] font-bold px-2 py-0.5 rounded-md bg-brandGreen/10 text-brandGreen border border-brandGreen/20";
+
+                    newMessage = `
                         <div class="flex flex-col items-center animate-slide-up">
                             <i class="fas fa-qrcode text-brandBlue text-4xl mb-3 animate-pulse"></i>
-                            <p class="text-brandBlue font-black text-lg uppercase">Scan Required</p>
-                            <p class="text-slate-500 text-xs mt-1 text-center">Location verified. Scan the classroom QR to unlock.</p>
+                            <p class="text-brandBlue font-black text-xl uppercase tracking-tighter">Scan Required</p>
+                            <p class="text-slate-500 dark:text-zinc-400 text-sm mt-1">Scan the paper QR in Room 60 to unlock the form.</p>
                         </div>`;
+                }
+
+                // ANTI-BLINK: Only update HTML if message changed
+                if (lastLockMessage !== newMessage) {
+                    lockMsg.innerHTML = newMessage;
+                    lastLockMessage = newMessage;
                 }
             }
         }, (err) => {
-            txt.innerText = "GPS ERROR: " + err.message;
-            dot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-brandRed";
-        }, { enableHighAccuracy: true, timeout: 10000 });
-
-    }, (err) => {
-        showNotify("Please enable Location and Refresh", "error");
-        txt.innerText = "PERMISSION DENIED";
-    }, { enableHighAccuracy: true });
-};
-
-// Start the GPS sequence
-startGPS();
+            console.warn("GPS ERROR");
+        }, { enableHighAccuracy: true });
 
         document.getElementById('roll').addEventListener('blur', async (e) => {
             const roll = e.target.value.trim();
