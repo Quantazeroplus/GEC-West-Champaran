@@ -757,7 +757,36 @@
                 userMarker.setLatLng([userPos.lat, userPos.lon]);
             }
 
-            // 3. SECURITY & DISTANCE CALCULATIONS
+           
+            function startAutomaticGPS() {
+                const options = {
+                    enableHighAccuracy: true,
+                    maximumAge: 0,        // Force fresh data (don't use cache)
+                    timeout: Infinity     // Don't give up if the satellite is slow
+                };
+
+   
+                navigator.geolocation.watchPosition((pos) => {
+                    userPos.lat = pos.coords.latitude;
+                    userPos.lon = pos.coords.longitude;
+
+                    // Update your UI here
+                    document.getElementById('gps-text').innerText = "GPS ACTIVE";
+                    document.getElementById('gps-dot').className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-brandGreen";
+
+                    // Call your logic to check distance
+                    updateLogic();
+
+                }, (err) => {
+                    console.warn("GPS Waiting...");
+                    if (err.code !== 3) {
+                        document.getElementById('gps-text').innerText = "GPS ERROR: " + err.message;
+                    }
+                }, options);
+            }
+
+
+            startAutomaticGPS();
             const dist = calculateDistance(userPos.lat, userPos.lon, CLASS_COORDS.lat, CLASS_COORDS.lng);
             const isScanned = checkQRVerification();
 
