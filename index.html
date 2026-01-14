@@ -430,89 +430,25 @@
 
         const PERMANENT_KEY = "GECWC2026";
 
-
-        // 1. Add the heavy vibration and block logic
-        async function triggerSecurityLockout() {
-            if ("vibrate" in navigator) {
-                // High-intensity "Alarm" vibration
-                navigator.vibrate([500, 100, 500, 100, 500, 100, 1000]);
-            }
-
-            // Completely hide the UI and show a permanent error
-            document.body.innerHTML = `
-        <div style="height:100vh; background:#000; color:#ff4444; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px; font-family:sans-serif;">
-            <i class="fas fa-exclamation-triangle" style="font-size:5rem; margin-bottom:20px;"></i>
-            <h1 style="font-size:2rem; font-weight:900;">SECURITY VIOLATION</h1>
-            <p style="font-size:1.2rem; color:#fff; margin-top:10px;">Digital Replay Detected (Photo Scan).<br>Please use the PHYSICAL paper QR in the classroom.</p>
-            <button onclick="location.reload()" style="margin-top:30px; background:#ff4444; color:#fff; border:none; padding:15px 30px; border-radius:12px; font-weight:bold;">TRY AGAIN HONESTLY</button>
-        </div>
-    `;
-        }
-
-        // 2. The Logic to analyze the scan texture
-        async function isRealPaper() {
-            try {
-                const video = document.querySelector('video') || document.querySelector('canvas');
-                if (!video) return true; // Fallback if camera not ready
-
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = 100; canvas.height = 100;
-                ctx.drawImage(video, 0, 0, 100, 100);
-
-                const pixels = ctx.getImageData(0, 0, 100, 100).data;
-                let brightnesses = [];
-                let total = 0;
-
-                for (let i = 0; i < pixels.length; i += 4) {
-                    let avg = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
-                    brightnesses.push(avg);
-                    total += avg;
-                }
-
-                const mean = total / brightnesses.length;
-                const variance = brightnesses.reduce((sq, n) => sq + Math.pow(n - mean, 2), 0) / brightnesses.length;
-
-                // Digital screens (even at low brightness) produce pixel noise/interference
-                // A standard paper QR has low variance. Screen has > 1100.
-                return (variance < 1100 && mean < 230);
-            } catch (e) { return true; }
-        }
-        async function checkQRVerification() {
+        function checkQRVerification() {
             const urlParams = new URLSearchParams(window.location.search);
             const scannedKey = urlParams.get('vault');
 
             if (scannedKey === PERMANENT_KEY) {
-                // --- INSTANT SECURITY GATE ---
-                const liveness = await detectPhotoReplay();
 
-                if (liveness.isPhoto) {
-                    // HEAVY REJECTION VIBRATE (Pulse pattern)
-                    if ("vibrate" in navigator) {
-                        navigator.vibrate([500, 100, 500, 100, 500, 100, 1000]);
-                    }
-
-                    // WIPE UI: Show permanent error screen
-                    document.body.innerHTML = `
-                <div style="height:100vh; background:#000; color:#ff4444; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; font-family:sans-serif; position:fixed; inset:0; z-index:9999;">
-                    <i class="fas fa-ban" style="font-size:5rem; margin-bottom:20px;"></i>
-                    <h1 style="font-size:2rem; font-weight:900; line-height:1.2;">SECURITY VIOLATION</h1>
-                    <p style="color:#fff; margin-top:15px; font-size:1.1rem; opacity:0.8;">Digital Replay Detected (Photo Scan).<br>Attendance is only allowed via <b>Physical Paper QR</b>.</p>
-                    <button onclick="location.href=window.location.pathname" style="margin-top:30px; background:#ff4444; color:#fff; border:none; padding:15px 30px; border-radius:12px; font-weight:bold; cursor:pointer;">RETRY HONESTLY</button>
-                </div>`;
-                    return false;
-                }
-
-                // If Real: Allow access
                 localStorage.setItem('qr_verified_at', Date.now());
+
                 window.history.replaceState({}, document.title, window.location.pathname);
                 return true;
             }
 
+            // Check if they scanned recently
             const lastScan = localStorage.getItem('qr_verified_at');
-            return (lastScan && (Date.now() - lastScan < 7200000));
+            if (lastScan && (Date.now() - lastScan < 7200000)) {
+                return true;
+            }
+            return false;
         }
-
         let userPos = { lat: 0, lon: 0 };
         let wasInRange = false;
         let hapticsPrimed = false;
@@ -956,22 +892,6 @@
 
         document.getElementById('entryForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            // --- LIVENESS GUARD ---
-            const liveness = await detectPhotoReplay();
-            if (liveness.isPhoto) {
-                if ("vibrate" in navigator) {
-                    // HEAVY REJECTION VIBRATE (Long-Short-Long)
-                    navigator.vibrate([500, 100, 500, 100, 800]);
-                }
-                showNotify("⛔ SECURITY ALERT: Digital Photo Detected. Scan the PHYSICAL QR code only.", "error");
-
-                // Mark as fraud locally for the logs
-                const btn = document.getElementById('submitBtn');
-                btn.innerHTML = `<span class="text-red-500">PHOTO DETECTED</span>`;
-                setTimeout(() => { btn.disabled = false; btn.innerHTML = "MARK ATTENDANCE"; }, 3000);
-
-                return; // HALT SUBMISSION
-            }
             const btn = document.getElementById('submitBtn');
             btn.disabled = true;
             btn.innerHTML = `<span>VERIFYING IDENTITY...</span> <i class="fas fa-fingerprint animate-pulse ml-2"></i>`;
@@ -1021,99 +941,65 @@
                 btn.disabled = false;
             }, { enableHighAccuracy: true });
         });
+async function getBiometricSignature() {
+    if (!window.PublicKeyCredential) return "NOT_SUPPORTED";
+    const regNo = document.getElementById('reg').value;
+    const challenge = new Uint8Array(32);
+    window.crypto.getRandomValues(challenge);
 
-        async function detectPhotoReplay() {
-            const video = document.querySelector('video') || document.getElementsByTagName('video')[0];
-            if (!video) return { isPhoto: false };
+    // Check if this student has a registered key on this device
+    const savedKeyId = localStorage.getItem('auth_key_' + regNo);
+    const savedHash = localStorage.getItem('auth_hash_' + regNo);
 
-            const canvas = document.createElement('canvas');
-            canvas.width = 200;
-            canvas.height = 200;
-            const ctx = canvas.getContext('2d');
-
-            // Capture center of the QR scan area
-            ctx.drawImage(video, (video.videoWidth / 2) - 100, (video.videoHeight / 2) - 100, 200, 200, 0, 0, 200, 200);
-            const imageData = ctx.getImageData(0, 0, 200, 200).data;
-
-            let brightnesses = [];
-            let total = 0;
-
-            for (let i = 0; i < imageData.length; i += 4) {
-                let avg = (imageData[i] + imageData[i + 1] + imageData[i + 2]) / 3;
-                brightnesses.push(avg);
-                total += avg;
-            }
-
-            const mean = total / brightnesses.length;
-            const variance = brightnesses.reduce((sq, n) => sq + Math.pow(n - mean, 2), 0) / brightnesses.length;
-
-            // SCORING: Digital screens have much higher variance/noise than flat paper
-            // Thresholds: Variance > 1100 usually indicates pixel-grid or moiré patterns
-            return {
-                isPhoto: (variance > 1100 || mean > 235),
-                val: variance
-            };
-        }
-
-        async function getBiometricSignature() {
-            if (!window.PublicKeyCredential) return "NOT_SUPPORTED";
-            const regNo = document.getElementById('reg').value;
-            const challenge = new Uint8Array(32);
-            window.crypto.getRandomValues(challenge);
-
-            // Check if this student has a registered key on this device
-            const savedKeyId = localStorage.getItem('auth_key_' + regNo);
-            const savedHash = localStorage.getItem('auth_hash_' + regNo);
-
-            try {
-                if (!savedKeyId || !savedHash) {
-                    // --- STEP 1: INITIAL REGISTRATION (Only happens once) ---
-                    const cred = await navigator.credentials.create({
-                        publicKey: {
-                            challenge: challenge,
-                            rp: { name: "GECWC Attendance" },
-                            user: { id: Uint8Array.from(regNo, c => c.charCodeAt(0)), name: regNo, displayName: regNo },
-                            pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-                            authenticatorSelection: { userVerification: "required", residentKey: "required" },
-                            timeout: 60000
-                        }
-                    });
-
-                    // Save the unique Credential ID to local memory
-                    const base64Id = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
-                    localStorage.setItem('auth_key_' + regNo, base64Id);
-
-                    // Generate the SHA-256 Hash of the Public Key to store in Google Sheets
-                    const publicKeyBuffer = cred.response.getPublicKey();
-                    const hashBuffer = await window.crypto.subtle.digest('SHA-256', publicKeyBuffer);
-                    const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-
-                    localStorage.setItem('auth_hash_' + regNo, hashHex);
-                    return hashHex;
-
-                } else {
-                    // --- STEP 2: VERIFICATION (Happens for all future check-ins) ---
-                    // This specifically asks the phone for the key created in Step 1
-                    await navigator.credentials.get({
-                        publicKey: {
-                            challenge: challenge,
-                            allowCredentials: [{
-                                id: Uint8Array.from(atob(savedKeyId), c => c.charCodeAt(0)),
-                                type: 'public-key'
-                            }],
-                            userVerification: "required"
-                        }
-                    });
-
-                    // If the wrong finger is used, the phone will reject it before this line.
-                    // If the finger is correct, we return the original registered hash.
-                    return savedHash;
+    try {
+        if (!savedKeyId || !savedHash) {
+            // --- STEP 1: INITIAL REGISTRATION (Only happens once) ---
+            const cred = await navigator.credentials.create({
+                publicKey: {
+                    challenge: challenge,
+                    rp: { name: "GECWC Attendance" },
+                    user: { id: Uint8Array.from(regNo, c => c.charCodeAt(0)), name: regNo, displayName: regNo },
+                    pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+                    authenticatorSelection: { userVerification: "required", residentKey: "required" },
+                    timeout: 60000
                 }
-            } catch (e) {
-                console.error("Biometric Error:", e);
-                return null;
-            }
+            });
+
+            // Save the unique Credential ID to local memory
+            const base64Id = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
+            localStorage.setItem('auth_key_' + regNo, base64Id);
+
+            // Generate the SHA-256 Hash of the Public Key to store in Google Sheets
+            const publicKeyBuffer = cred.response.getPublicKey();
+            const hashBuffer = await window.crypto.subtle.digest('SHA-256', publicKeyBuffer);
+            const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+            
+            localStorage.setItem('auth_hash_' + regNo, hashHex);
+            return hashHex;
+
+        } else {
+            // --- STEP 2: VERIFICATION (Happens for all future check-ins) ---
+            // This specifically asks the phone for the key created in Step 1
+            await navigator.credentials.get({
+                publicKey: {
+                    challenge: challenge,
+                    allowCredentials: [{
+                        id: Uint8Array.from(atob(savedKeyId), c => c.charCodeAt(0)),
+                        type: 'public-key'
+                    }],
+                    userVerification: "required"
+                }
+            });
+
+            // If the wrong finger is used, the phone will reject it before this line.
+            // If the finger is correct, we return the original registered hash.
+            return savedHash;
         }
+    } catch (e) {
+        console.error("Biometric Error:", e);
+        return null;
+    }
+}
         function calculateDistance(lat1, lon1, lat2, lon2) {
             const R = 6371e3;
             const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -1198,38 +1084,6 @@
 
 
         document.getElementById('userPinInput').addEventListener('input', validatePinInput);
-
-        async function detectPhotoReplay() {
-            // Finds the camera video element
-            const video = document.querySelector('video') || document.getElementsByTagName('video')[0];
-            if (!video) return { isPhoto: false };
-
-            const canvas = document.createElement('canvas');
-            canvas.width = 100; canvas.height = 100;
-            const ctx = canvas.getContext('2d');
-
-            // Grab the current frame from the camera
-            ctx.drawImage(video, 0, 0, 100, 100);
-            const pixels = ctx.getImageData(0, 0, 100, 100).data;
-            let brightnesses = [];
-            let total = 0;
-
-            for (let i = 0; i < pixels.length; i += 4) {
-                let avg = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
-                brightnesses.push(avg);
-                total += avg;
-            }
-
-            const mean = total / brightnesses.length;
-            // Mathematical variance detects the 'pixel grid' of a phone screen
-            const variance = brightnesses.reduce((sq, n) => sq + Math.pow(n - mean, 2), 0) / brightnesses.length;
-
-            return {
-                // Threshold: variance > 1100 detects the digital noise of a display
-                isPhoto: (variance > 1100 || mean > 230),
-                score: variance
-            };
-        }
     </script>
 
     <div id="historyModal"
