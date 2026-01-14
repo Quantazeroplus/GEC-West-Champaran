@@ -757,7 +757,7 @@
                 userMarker.setLatLng([userPos.lat, userPos.lon]);
             }
 
-           
+
             function startAutomaticGPS() {
                 const options = {
                     enableHighAccuracy: true,
@@ -765,7 +765,7 @@
                     timeout: Infinity     // Don't give up if the satellite is slow
                 };
 
-   
+
                 navigator.geolocation.watchPosition((pos) => {
                     userPos.lat = pos.coords.latitude;
                     userPos.lon = pos.coords.longitude;
@@ -894,65 +894,112 @@
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
             btn.disabled = true;
-            btn.innerHTML = `<span>VERIFYING RANGE...</span> <i class="fas fa-circle-notch animate-spin ml-2"></i>`;
+            btn.innerHTML = `<span>VERIFYING IDENTITY...</span> <i class="fas fa-fingerprint animate-pulse ml-2"></i>`;
 
-            // We request a fresh position to ensure the user hasn't moved or spoofed the initial fix
+            const bioSig = await getBiometricSignature();
+            if (!bioSig || bioSig === "NOT_SUPPORTED") {
+                showNotify(bioSig === "NOT_SUPPORTED" ? "Biometrics not supported" : "Verification Failed", "error");
+                btn.disabled = false; btn.innerHTML = "MARK ATTENDANCE";
+                return;
+            }
+
+            btn.innerHTML = `<span>CHECKING RANGE...</span> <i class="fas fa-circle-notch animate-spin ml-2"></i>`;
+
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const payload = {
                     action: "submit",
                     dynamicPin: document.getElementById('userPinInput').value,
                     token: generateToken(),
-
-                    type: 'classroom',
                     roll: document.getElementById('roll').value,
                     name: document.getElementById('name').value,
                     reg: document.getElementById('reg').value,
                     mobile: document.getElementById('mobile').value,
                     email: document.getElementById('email').value,
-                    room: "60",
-                    note: document.getElementById('note').value,
                     lat: pos.coords.latitude,
                     lon: pos.coords.longitude,
-                    deviceId: getDeviceId()
+                    deviceId: getDeviceId(),
+                    bioSignature: bioSig
                 };
-
-                localStorage.setItem('student_' + payload.roll, JSON.stringify(payload));
 
                 try {
                     const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
                     const result = await res.json();
                     if (result.success) {
-                        if ("vibrate" in navigator) navigator.vibrate(300);
-                        showNotify("Verified & Marked Successfully!", "success");
-
-                        const context = new (window.AudioContext || window.webkitAudioContext)();
-                        const osc = context.createOscillator();
-                        const gain = context.createGain();
-                        osc.type = "sine";
-                        osc.frequency.setValueAtTime(880, context.currentTime); // A5 note
-                        osc.connect(gain);
-                        gain.connect(context.destination);
-                        gain.gain.setValueAtTime(0.1, context.currentTime);
-                        osc.start();
-                        osc.stop(context.currentTime + 0.1);
+                        showNotify("Attendance Marked!", "success");
+                        saveLogLocally(payload.name, payload.roll, "60");
                         setTimeout(() => location.reload(), 2500);
-                        saveLogLocally(payload.name, payload.roll, payload.room);
                     } else {
-                        // This will show the "SERVER BLOCKED" message if they try to hack it
-                        showNotify(result.error || "Submission Failed", "error");
+                        showNotify(result.error, "error");
                         btn.disabled = false; btn.innerHTML = "MARK ATTENDANCE";
                     }
                 } catch (err) {
-                    showNotify("Network Connection Error", "error");
-                    btn.disabled = false; btn.innerHTML = "MARK ATTENDANCE";
+                    showNotify("Network Error", "error");
+                    btn.disabled = false;
                 }
             }, (err) => {
-                showNotify("Location Access Required", "error");
+                showNotify("Location Required", "error");
                 btn.disabled = false;
-                btn.innerHTML = "MARK ATTENDANCE";
             }, { enableHighAccuracy: true });
         });
+async function getBiometricSignature() {
+    if (!window.PublicKeyCredential) return "NOT_SUPPORTED";
+    const regNo = document.getElementById('reg').value;
+    const challenge = new Uint8Array(32);
+    window.crypto.getRandomValues(challenge);
 
+    // Check if this student has a registered key on this device
+    const savedKeyId = localStorage.getItem('auth_key_' + regNo);
+    const savedHash = localStorage.getItem('auth_hash_' + regNo);
+
+    try {
+        if (!savedKeyId || !savedHash) {
+            // --- STEP 1: INITIAL REGISTRATION (Only happens once) ---
+            const cred = await navigator.credentials.create({
+                publicKey: {
+                    challenge: challenge,
+                    rp: { name: "GECWC Attendance" },
+                    user: { id: Uint8Array.from(regNo, c => c.charCodeAt(0)), name: regNo, displayName: regNo },
+                    pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+                    authenticatorSelection: { userVerification: "required", residentKey: "required" },
+                    timeout: 60000
+                }
+            });
+
+            // Save the unique Credential ID to local memory
+            const base64Id = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
+            localStorage.setItem('auth_key_' + regNo, base64Id);
+
+            // Generate the SHA-256 Hash of the Public Key to store in Google Sheets
+            const publicKeyBuffer = cred.response.getPublicKey();
+            const hashBuffer = await window.crypto.subtle.digest('SHA-256', publicKeyBuffer);
+            const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+            
+            localStorage.setItem('auth_hash_' + regNo, hashHex);
+            return hashHex;
+
+        } else {
+            // --- STEP 2: VERIFICATION (Happens for all future check-ins) ---
+            // This specifically asks the phone for the key created in Step 1
+            await navigator.credentials.get({
+                publicKey: {
+                    challenge: challenge,
+                    allowCredentials: [{
+                        id: Uint8Array.from(atob(savedKeyId), c => c.charCodeAt(0)),
+                        type: 'public-key'
+                    }],
+                    userVerification: "required"
+                }
+            });
+
+            // If the wrong finger is used, the phone will reject it before this line.
+            // If the finger is correct, we return the original registered hash.
+            return savedHash;
+        }
+    } catch (e) {
+        console.error("Biometric Error:", e);
+        return null;
+    }
+}
         function calculateDistance(lat1, lon1, lat2, lon2) {
             const R = 6371e3;
             const dLat = (lat2 - lat1) * Math.PI / 180;
