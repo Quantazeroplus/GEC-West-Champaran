@@ -71,7 +71,6 @@ async function runPingFallback() {
   const start = Date.now();
   const pingDisplay = document.getElementById("debug-ping");
   try {
-   
     await fetch("https://connectivitycheck.gstatic.com/generate_204", {
       mode: "no-cors",
       cache: "no-store",
@@ -133,7 +132,6 @@ async function fetchAdminNotice() {
     const notices = data.notices || [];
 
     if (notices.length > 0) {
-     
       const latest = notices[notices.length - 1];
 
       // Create a unique ID based on message text so we know if they've seen THIS specific one
@@ -179,7 +177,6 @@ async function fetchAdminNotice() {
                 </div>
             `;
 
-     
       document
         .getElementById("close-notice-btn")
         .addEventListener("click", () => {
@@ -220,7 +217,6 @@ function dismissNotice(noticeId) {
   }, 400);
 }
 
-
 function dismissNotice(noticeId) {
   const gridContainer = document.getElementById("noticeGrid");
   gridContainer.style.opacity = "0";
@@ -256,7 +252,6 @@ function renderHistoryModal(notices) {
   if (!list) return;
   list.innerHTML = "";
 
-  
   [...notices].reverse().forEach((n) => {
     const item = document.createElement("div");
     item.className =
@@ -303,7 +298,6 @@ function showGPSStatus() {
   showNotify(`GPS Status: ${statusText}`, isError ? "error" : "success");
   if ("vibrate" in navigator) navigator.vibrate(20);
 }
-
 
 function renderLocalLogs() {
   const list = document.getElementById("localLogsList");
@@ -581,7 +575,7 @@ navigator.geolocation.watchPosition(
 
       entryForm.classList.add("hidden");
       lockMsg.classList.remove("hidden");
-     
+
       updateLockUI(
         "SCAN QR CODE",
         "Please Scan the Qr code..",
@@ -599,7 +593,6 @@ navigator.geolocation.watchPosition(
       entryForm.classList.add("hidden");
       lockMsg.classList.remove("hidden");
 
- 
       updateLockUI(
         "VERIFYING FLOOR",
         "Hold phone steady infront of QR",
@@ -913,7 +906,6 @@ function updatePINSystem() {
 setInterval(updatePINSystem, 1000);
 updatePINSystem();
 
-
 setInterval(() => {
   const dLock = document.getElementById("debug-lock");
   if (floorVerified) {
@@ -948,7 +940,6 @@ function validatePinInput() {
     icon.className = "fas fa-lock";
     input.classList.remove("border-brandGreen");
 
-    
     if (input.value.length === 4) {
       input.classList.add("animate-shake");
       if ("vibrate" in navigator) navigator.vibrate([100, 50, 100]);
@@ -962,7 +953,6 @@ function updateLogic() {
   const lockIcon = document.getElementById("btn-lock-icon");
   const isScanned = checkQRVerification();
 
-  
   const isLaptop = document.getElementById("debug-mag").innerText === "LAPTOP";
   const dist = calculateDistance(
     userPos.lat,
@@ -1025,8 +1015,58 @@ async function updateLiveTimetable() {
       .toLocaleString("en-us", { weekday: "long" })
       .toUpperCase();
 
+    // IST Date string for holiday matching
+    const todayISO =
+      ist.getFullYear() +
+      "-" +
+      String(ist.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(ist.getDate()).padStart(2, "0");
+
+    const displayDate = ist.toLocaleDateString("en-GB", {
+      weekday: "long",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+
+    // --- 1. HOLIDAY & SUNDAY FEATURE ---
+    const isSunday = ist.getDay() === 0;
+    const holidayInfo =
+      data.holidays && data.holidays[todayISO] ? data.holidays[todayISO] : null;
+
+    if (isSunday || holidayInfo) {
+      ongoingSection.classList.remove("hidden");
+      timelineSection.classList.add("hidden");
+
+      const hName = isSunday ? "Sunday Weekly Off" : holidayInfo.name;
+      const hType = isSunday ? "Weekend" : holidayInfo.type;
+      const hIcon = isSunday ? "fa-calendar-day" : "fa-umbrella-beach";
+
+      ongoingSection.innerHTML = `
+                <div class="relative overflow-hidden bg-white dark:bg-zinc-950 p-8 rounded-[2.5rem] border-2 border-amber-500/20 shadow-2xl text-center animate-slide-up">
+                    <div class="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/10 blur-[50px] rounded-full"></div>
+                    <div class="relative z-10">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 bg-amber-500/10 border border-amber-500/30">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                            <span class="text-[9px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-500">${hType}</span>
+                        </div>
+                        <div class="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
+                            <i class="fas ${hIcon} text-amber-500 text-3xl"></i>
+                        </div>
+                        <h3 class="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em] mb-1">${displayDate}</h3>
+                        <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">${hName}</h2>
+                        <div class="mt-4 pt-4 border-t border-slate-100 dark:border-zinc-800">
+                            <p class="text-slate-500 dark:text-zinc-400 text-xs font-medium">No classes scheduled today. Enjoy your break!</p>
+                        </div>
+                    </div>
+                </div>`;
+      return;
+    }
+
+    // --- 2. CLASS DATA PREPARATION ---
     const toMins = (t) => {
-      if (!t.includes(":")) return 0;
+      if (!t || !t.includes(":")) return 0;
       const [h, m] = t.split(":").map(Number);
       return h * 60 + m;
     };
@@ -1036,74 +1076,93 @@ async function updateLiveTimetable() {
       .map((c) => ({ ...c, sM: toMins(c.startRaw), eM: toMins(c.endRaw) }))
       .sort((a, b) => a.sM - b.sM);
 
-    if (todaysClasses.length === 0) return;
+    if (todaysClasses.length === 0) {
+      ongoingSection.classList.add("hidden");
+      timelineSection.classList.add("hidden");
+      return;
+    }
 
-    // --- TOP CARD REFRESH ---
+    // --- 3. TOP CARD LOGIC (INCLUDING ALL PREVIOUS UI FEATURES) ---
     let active = todaysClasses.find(
       (c) => currentMins >= c.sM && currentMins < c.eM,
     );
-    let next = todaysClasses.find((c) => c.sM > currentMins);
+    let next = todaysClasses.find((c) => {
+      const diff = c.sM - currentMins;
+      return diff > 0 && diff <= 90; // The 90-minute window you asked for
+    });
+
     let displayClass = active || next;
 
     if (displayClass) {
       ongoingSection.classList.remove("hidden");
-      document.getElementById("active-subject").innerText =
-        displayClass.subject;
-      document.getElementById("active-faculty").innerText =
-        displayClass.faculty;
-      document.getElementById("active-teacher-img").src =
-        displayClass.image || "image/logo.png";
-      document.getElementById("active-start-label").innerText =
-        displayClass.startRaw;
-      document.getElementById("active-end-label").innerText =
-        displayClass.endRaw;
 
-      const badge = document.getElementById("active-badge");
-      const statusTxt = document.getElementById("status-text");
-      const tagBox = document.getElementById("status-tag-container");
-      const countdown = document.getElementById("active-countdown");
-      const activeBar = document.getElementById("active-class-progress");
-      const pingRing = document.getElementById("ping-ring");
-      const pingDot = document.getElementById("ping-dot");
+      // Re-calculating progress for the active class
+      const perc = active
+        ? Math.min(
+            100,
+            ((currentMins - displayClass.sM) /
+              (displayClass.eM - displayClass.sM)) *
+              100,
+          )
+        : 0;
+      const timeLeft = active
+        ? displayClass.eM - currentMins
+        : displayClass.sM - currentMins;
 
-      if (active) {
-        badge.innerText = "LIVE";
-        badge.className =
-          "absolute -bottom-1 -right-1 bg-brandGreen text-white text-[8px] font-black px-3 py-1 rounded-xl border-2 border-white dark:border-zinc-950 animate-bounce";
-        statusTxt.innerText = "Currently Teaching";
-        statusTxt.className = "text-[9px] font-black uppercase text-brandGreen";
-        tagBox.className =
-          "inline-flex items-center gap-2 px-3 py-1 rounded-full mb-2 bg-brandGreen/10 border-2 border-brandGreen/40";
-        pingRing.className =
-          "absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping bg-brandGreen";
-        pingDot.className =
-          "relative inline-flex rounded-full h-2 w-2 bg-brandGreen";
+      ongoingSection.innerHTML = `
+                <div class="relative overflow-hidden bg-white dark:bg-zinc-950 p-5 md:p-6 rounded-[2.5rem] border border-slate-200 dark:border-white/10 shadow-2xl animate-slide-up">
+                    <div class="absolute -top-10 -right-10 w-32 h-32 bg-brandBlue/10 blur-[50px] rounded-full"></div>
+                    <div class="relative z-10 flex flex-col md:flex-row items-center gap-6">
+                        <div class="relative flex-shrink-0">
+                            <div class="w-24 h-24 rounded-[2rem] overflow-hidden border-2 border-white dark:border-zinc-800 shadow-xl bg-white">
+                                <img src="${displayClass.image || "image/logo.png"}" class="w-full h-full object-cover">
+                            </div>
+                            <div class="absolute -bottom-1 -right-1 ${active ? "bg-brandGreen animate-bounce" : "bg-brandBlue"} text-white text-[8px] font-black px-3 py-1 rounded-xl border-2 border-white dark:border-zinc-950 shadow-lg uppercase">
+                                ${active ? "LIVE" : "NEXT"}
+                            </div>
+                        </div>
 
-        const perc = Math.min(
-          100,
-          ((currentMins - active.sM) / (active.eM - active.sM)) * 100,
-        );
-        activeBar.style.width = `${perc}%`;
-        activeBar.className = "h-full rounded-full bg-brandGreen shadow-lg";
-        countdown.innerText = `${active.eM - currentMins}m REMAINING`;
-      } else {
-        badge.innerText = "NEXT";
-        badge.className =
-          "absolute -bottom-1 -right-1 bg-brandBlue text-white text-[8px] font-black px-3 py-1 rounded-xl border-2 border-white dark:border-zinc-950";
-        statusTxt.innerText = "Up Next in Schedule";
-        statusTxt.className = "text-[9px] font-black uppercase text-brandBlue";
-        tagBox.className =
-          "inline-flex items-center gap-2 px-3 py-1 rounded-full mb-2 bg-brandBlue/10 border-2 border-brandBlue/40";
-        pingRing.className = "hidden";
-        pingDot.className =
-          "relative inline-flex rounded-full h-2 w-2 bg-brandBlue";
+                        <div class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                            <div>
+                                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-2 border ${active ? "bg-brandGreen/10 border-brandGreen/40" : "bg-brandBlue/10 border-brandBlue/40"}">
+                                    <span class="relative flex h-2 w-2">
+                                        <span class="absolute inline-flex h-full w-full rounded-full opacity-75 ${active ? "animate-ping bg-brandGreen" : "bg-brandBlue"}"></span>
+                                        <span class="relative inline-flex rounded-full h-2 w-2 ${active ? "bg-brandGreen" : "bg-brandBlue"}"></span>
+                                    </span>
+                                    <span class="text-[9px] font-black uppercase tracking-widest ${active ? "text-brandGreen" : "text-brandBlue"}">${active ? "Currently Teaching" : "Starts Soon"}</span>
+                                </div>
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white leading-tight truncate">${displayClass.subject}</h2>
+                                <div class="flex items-center gap-3 mt-1">
+                                    <p class="text-slate-500 dark:text-zinc-400 font-bold text-[9px] uppercase tracking-widest truncate">${displayClass.faculty}</p>
+                                    <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                                    <p class="text-brandBlue font-black text-[9px] uppercase tracking-widest">Room 60</p>
+                                </div>
+                            </div>
 
-        activeBar.style.width = `0%`;
-        countdown.innerText = `STARTS IN ${displayClass.sM - currentMins}m`;
-      }
+                            <div class="bg-slate-50 dark:bg-white/[0.03] p-4 rounded-3xl border border-slate-100 dark:border-white/5 flex flex-col justify-center">
+                                <div class="flex justify-between items-end mb-1">
+                                    <p class="text-[8px] font-black text-slate-400 uppercase">Session Timer</p>
+                                    <div class="text-sm font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
+                                        ${active ? timeLeft + "m REMAINING" : "STARTS IN " + timeLeft + "m"}
+                                    </div>
+                                </div>
+                                <div class="w-full h-1.5 bg-slate-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full transition-all duration-1000 ${active ? "bg-brandGreen" : "bg-brandBlue"}" style="width: ${perc}%"></div>
+                                </div>
+                                <div class="flex justify-between mt-1 text-[7px] font-black text-slate-400 uppercase">
+                                    <span>${displayClass.startRaw}</span>
+                                    <span>${displayClass.endRaw}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+    } else {
+      ongoingSection.classList.add("hidden");
     }
 
-    // --- COMPACT ROADMAP (STRICT BORDERS & NO DIMMING) ---
+    // --- 4. TIMELINE LOGIC (RESTORED ALL STYLING) ---
     timelineSection.classList.remove("hidden");
     roadmapList.innerHTML = "";
     let completedSteps = 0;
@@ -1113,8 +1172,7 @@ async function updateLiveTimetable() {
         dot = "bg-zinc-800",
         cardBorder = "border-slate-200 dark:border-white/10",
         icon = "fa-clock",
-        tagStyle = "bg-zinc-800 text-zinc-500",
-        dotBorder = "border-white dark:border-zinc-950";
+        tagStyle = "bg-zinc-800 text-zinc-500";
 
       if (currentMins >= item.eM) {
         state = "Done";
@@ -1131,7 +1189,6 @@ async function updateLiveTimetable() {
         tagStyle = "bg-brandBlue text-white";
         completedSteps += 0.5;
       } else {
-       
         tagStyle =
           "bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/30";
         icon = "fa-hourglass-start";
@@ -1141,7 +1198,7 @@ async function updateLiveTimetable() {
         "beforeend",
         `
                 <div class="relative flex items-start gap-4 pb-4 last:pb-2">
-                    <div class="relative z-20 w-11 h-11 rounded-2xl flex items-center justify-center border-4 ${dotBorder} ${dot} transition-all shadow-lg text-white text-[10px]">
+                    <div class="relative z-20 w-11 h-11 rounded-2xl flex items-center justify-center border-4 border-white dark:border-zinc-950 ${dot} transition-all shadow-lg text-white text-[10px]">
                         <i class="fas ${icon}"></i>
                     </div>
                     <div class="flex-grow p-4 rounded-[2rem] border-2 bg-white dark:bg-zinc-900/40 ${cardBorder} transition-all">
@@ -1162,16 +1219,18 @@ async function updateLiveTimetable() {
       );
     });
 
-    const perc = Math.min(
+    // Update Global Day Progress
+    const totalPerc = Math.min(
       100,
       Math.round((completedSteps / todaysClasses.length) * 100),
     );
-    document.getElementById("timeline-progress-bar").style.height = `${perc}%`;
+    document.getElementById("timeline-progress-bar").style.height =
+      `${totalPerc}%`;
     const pTxt = document.getElementById("day-progress-text");
-    pTxt.innerText = `${perc}% COMPLETE`;
-    pTxt.className = `px-4 py-2 rounded-2xl font-black text-[9px] uppercase border-2 shadow-sm ${perc === 100 ? "bg-brandGreen/10 border-brandGreen text-brandGreen" : "bg-brandBlue/10 border-brandBlue text-brandBlue"}`;
+    pTxt.innerText = `${totalPerc}% COMPLETE`;
+    pTxt.className = `px-4 py-2 rounded-2xl font-black text-[9px] uppercase border-2 shadow-sm ${totalPerc === 100 ? "bg-brandGreen/10 border-brandGreen text-brandGreen" : "bg-brandBlue/10 border-brandBlue text-brandBlue"}`;
   } catch (e) {
-    console.error("UI Update Failed");
+    console.error("UI Update Failed", e);
   }
 }
 // --- INITIALIZE ALL SYSTEMS ---
@@ -1179,11 +1238,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // 1. Check for class immediately
   updateLiveTimetable();
 
-  
   fetchAdminNotice();
   renderLocalLogs();
   checkPhysicalFloor();
-
 
   document
     .getElementById("userPinInput")
@@ -1198,14 +1255,12 @@ function launchGoogleLens() {
   const isAndroid = /Android/i.test(navigator.userAgent);
 
   if (isAndroid) {
-   
     const googleAppLensIntent =
       "intent://google.com/searchbyimage/upload#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.SEND;end";
 
     try {
       window.location.href = googleAppLensIntent;
     } catch (e) {
-    
       window.location.href = "https://www.google.com/searchbyimage/upload";
     }
   } else {
@@ -1220,24 +1275,19 @@ function launchIntegratedGoogle() {
   const isAndroid = /Android/i.test(navigator.userAgent);
 
   if (isAndroid) {
-  
     const directLensIntent = "googlelens://v1/scan";
 
-    
     const intentURL =
       "intent://scan/#Intent;scheme=googlelens;package=com.google.ar.lens;end";
 
-  
     window.location.href = directLensIntent;
 
-  
     setTimeout(() => {
       if (document.hasFocus()) {
         window.location.href = intentURL;
       }
     }, 800);
 
-    
     setTimeout(() => {
       if (document.hasFocus()) {
         window.location.href = "https://www.google.com/searchbyimage/upload";
@@ -1250,7 +1300,7 @@ function launchIntegratedGoogle() {
 }
 
 let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
+window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
   deferredPrompt = e;
 
