@@ -71,6 +71,7 @@ async function runPingFallback() {
   const start = Date.now();
   const pingDisplay = document.getElementById("debug-ping");
   try {
+    // Uses a Google URL to bypass CORS and Laptop security blocks
     await fetch("https://connectivitycheck.gstatic.com/generate_204", {
       mode: "no-cors",
       cache: "no-store",
@@ -132,6 +133,7 @@ async function fetchAdminNotice() {
     const notices = data.notices || [];
 
     if (notices.length > 0) {
+      // 1. Get ONLY the absolute latest notice
       const latest = notices[notices.length - 1];
 
       // Create a unique ID based on message text so we know if they've seen THIS specific one
@@ -177,6 +179,7 @@ async function fetchAdminNotice() {
                 </div>
             `;
 
+      // 3. ATTACH CLICK EVENT MANUALLY (More reliable than onclick attribute)
       document
         .getElementById("close-notice-btn")
         .addEventListener("click", () => {
@@ -217,6 +220,7 @@ function dismissNotice(noticeId) {
   }, 400);
 }
 
+// Updated Dismiss function to save preference permanently
 function dismissNotice(noticeId) {
   const gridContainer = document.getElementById("noticeGrid");
   gridContainer.style.opacity = "0";
@@ -252,6 +256,7 @@ function renderHistoryModal(notices) {
   if (!list) return;
   list.innerHTML = "";
 
+  // Show notices in reverse order (newest on top) inside the history modal
   [...notices].reverse().forEach((n) => {
     const item = document.createElement("div");
     item.className =
@@ -299,6 +304,7 @@ function showGPSStatus() {
   if ("vibrate" in navigator) navigator.vibrate(20);
 }
 
+// Load logs from phone memory and display them
 function renderLocalLogs() {
   const list = document.getElementById("localLogsList");
   const noLogsMsg = document.getElementById("noLogsMsg");
@@ -575,7 +581,7 @@ navigator.geolocation.watchPosition(
 
       entryForm.classList.add("hidden");
       lockMsg.classList.remove("hidden");
-
+      // Your specific request: Blue QR icon
       updateLockUI(
         "SCAN QR CODE",
         "Please Scan the Qr code..",
@@ -593,6 +599,7 @@ navigator.geolocation.watchPosition(
       entryForm.classList.add("hidden");
       lockMsg.classList.remove("hidden");
 
+      // Show the specific Layer icon for floor security
       updateLockUI(
         "VERIFYING FLOOR",
         "Hold phone steady infront of QR",
@@ -906,6 +913,7 @@ function updatePINSystem() {
 setInterval(updatePINSystem, 1000);
 updatePINSystem();
 
+// Force the GPS logic to re-check status every 2 seconds
 setInterval(() => {
   const dLock = document.getElementById("debug-lock");
   if (floorVerified) {
@@ -940,6 +948,7 @@ function validatePinInput() {
     icon.className = "fas fa-lock";
     input.classList.remove("border-brandGreen");
 
+    // Trigger Shake & Vibrate if 4 wrong digits are typed
     if (input.value.length === 4) {
       input.classList.add("animate-shake");
       if ("vibrate" in navigator) navigator.vibrate([100, 50, 100]);
@@ -953,6 +962,7 @@ function updateLogic() {
   const lockIcon = document.getElementById("btn-lock-icon");
   const isScanned = checkQRVerification();
 
+  // Check if we are in range based on device type
   const isLaptop = document.getElementById("debug-mag").innerText === "LAPTOP";
   const dist = calculateDistance(
     userPos.lat,
@@ -1094,22 +1104,26 @@ async function updateLiveTimetable() {
     let displayClass = active || next;
 
     if (displayClass) {
-      ongoingSection.classList.remove("hidden");
+      const isC = displayClass.isCancelled;
 
-      // Re-calculating progress for the active class
-      const perc = active
-        ? Math.min(
-            100,
-            ((currentMins - displayClass.sM) /
-              (displayClass.eM - displayClass.sM)) *
+      // If the class is cancelled, hide the Ongoing Section and stop here
+      if (isC) {
+        ongoingSection.classList.add("hidden");
+      } else {
+        ongoingSection.classList.remove("hidden");
+        const perc = active
+          ? Math.min(
               100,
-          )
-        : 0;
-      const timeLeft = active
-        ? displayClass.eM - currentMins
-        : displayClass.sM - currentMins;
+              ((currentMins - displayClass.sM) /
+                (displayClass.eM - displayClass.sM)) *
+                100,
+            )
+          : 0;
+        const timeLeft = active
+          ? displayClass.eM - currentMins
+          : displayClass.sM - currentMins;
 
-      ongoingSection.innerHTML = `
+        ongoingSection.innerHTML = `
                 <div class="relative overflow-hidden bg-white dark:bg-zinc-950 p-5 md:p-6 rounded-[2.5rem] border border-slate-200 dark:border-white/10 shadow-2xl animate-slide-up">
                     <div class="absolute -top-10 -right-10 w-32 h-32 bg-brandBlue/10 blur-[50px] rounded-full"></div>
                     <div class="relative z-10 flex flex-col md:flex-row items-center gap-6">
@@ -1121,7 +1135,6 @@ async function updateLiveTimetable() {
                                 ${active ? "LIVE" : "NEXT"}
                             </div>
                         </div>
-
                         <div class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                             <div>
                                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-2 border ${active ? "bg-brandGreen/10 border-brandGreen/40" : "bg-brandBlue/10 border-brandBlue/40"}">
@@ -1138,7 +1151,6 @@ async function updateLiveTimetable() {
                                     <p class="text-brandBlue font-black text-[9px] uppercase tracking-widest">Room 60</p>
                                 </div>
                             </div>
-
                             <div class="bg-slate-50 dark:bg-white/[0.03] p-4 rounded-3xl border border-slate-100 dark:border-white/5 flex flex-col justify-center">
                                 <div class="flex justify-between items-end mb-1">
                                     <p class="text-[8px] font-black text-slate-400 uppercase">Session Timer</p>
@@ -1156,8 +1168,166 @@ async function updateLiveTimetable() {
                             </div>
                         </div>
                     </div>
-                </div>
-            `;
+                </div>`;
+      }
+    }
+
+    if (displayClass) {
+      // --- 3. TOP CARD LOGIC (Fixed Cancellation Gatekeeper) ---
+      let active = todaysClasses.find(
+        (c) => currentMins >= c.sM && currentMins < c.eM,
+      );
+      let next = todaysClasses.find((c) => {
+        const diff = c.sM - currentMins;
+        return diff > 0 && diff <= 90;
+      });
+
+      let displayClass = active || next;
+
+      // GATEKEEPER: If no class exists OR current class is checked 'Cancelled' in Sheet, hide section
+      if (!displayClass || displayClass.isCancelled) {
+        ongoingSection.classList.add("hidden");
+      } else {
+        ongoingSection.classList.remove("hidden");
+
+        const perc = active
+          ? Math.min(
+              100,
+              ((currentMins - displayClass.sM) /
+                (displayClass.eM - displayClass.sM)) *
+                100,
+            )
+          : 0;
+        const timeLeft = active
+          ? displayClass.eM - currentMins
+          : displayClass.sM - currentMins;
+
+        ongoingSection.innerHTML = `
+                <div class="relative overflow-hidden bg-white dark:bg-zinc-950 p-5 md:p-6 rounded-[2.5rem] border border-slate-200 dark:border-white/10 shadow-2xl animate-slide-up">
+                    <div class="absolute -top-10 -right-10 w-32 h-32 bg-brandBlue/10 blur-[50px] rounded-full"></div>
+                    <div class="relative z-10 flex flex-col md:flex-row items-center gap-6">
+                        <div class="relative flex-shrink-0">
+                            <div class="w-24 h-24 rounded-[2rem] overflow-hidden border-2 border-white dark:border-zinc-800 shadow-xl bg-white">
+                                <img src="${displayClass.image || "image/logo.png"}" class="w-full h-full object-cover">
+                            </div>
+                            <div class="absolute -bottom-1 -right-1 ${active ? "bg-brandGreen animate-bounce" : "bg-brandBlue"} text-white text-[8px] font-black px-3 py-1 rounded-xl border-2 border-white dark:border-zinc-950 shadow-lg uppercase">
+                                ${active ? "LIVE" : "NEXT"}
+                            </div>
+                        </div>
+                        <div class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                            <div>
+                                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-2 border ${active ? "bg-brandGreen/10 border-brandGreen/40" : "bg-brandBlue/10 border-brandBlue/40"}">
+                                    <span class="relative flex h-2 w-2">
+                                        <span class="absolute inline-flex h-full w-full rounded-full opacity-75 ${active ? "animate-ping bg-brandGreen" : "bg-brandBlue"}"></span>
+                                        <span class="relative inline-flex rounded-full h-2 w-2 ${active ? "bg-brandGreen" : "bg-brandBlue"}"></span>
+                                    </span>
+                                    <span class="text-[9px] font-black uppercase tracking-widest ${active ? "text-brandGreen" : "text-brandBlue"}">${active ? "Currently Teaching" : "Starts Soon"}</span>
+                                </div>
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white leading-tight truncate">${displayClass.subject}</h2>
+                                <div class="flex items-center gap-3 mt-1">
+                                    <p class="text-slate-500 dark:text-zinc-400 font-bold text-[9px] uppercase tracking-widest truncate">${displayClass.faculty}</p>
+                                    <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                                    <p class="text-brandBlue font-black text-[9px] uppercase tracking-widest">Room 60</p>
+                                </div>
+                            </div>
+                            <div class="bg-slate-50 dark:bg-white/[0.03] p-4 rounded-3xl border border-slate-100 dark:border-white/5 flex flex-col justify-center">
+                                <div class="flex justify-between items-end mb-1">
+                                    <p class="text-[8px] font-black text-slate-400 uppercase">Session Timer</p>
+                                    <div class="text-sm font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
+                                        ${active ? timeLeft + "m REMAINING" : "STARTS IN " + timeLeft + "m"}
+                                    </div>
+                                </div>
+                                <div class="w-full h-1.5 bg-slate-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full transition-all duration-1000 ${active ? "bg-brandGreen" : "bg-brandBlue"}" style="width: ${perc}%"></div>
+                                </div>
+                                <div class="flex justify-between mt-1 text-[7px] font-black text-slate-400 uppercase">
+                                    <span>${displayClass.startRaw}</span>
+                                    <span>${displayClass.endRaw}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+      }
+
+      // --- 4. TIMELINE LOGIC (Unified Bright Red Styling) ---
+      timelineSection.classList.remove("hidden");
+      roadmapList.innerHTML = "";
+      let completedSteps = 0;
+
+      todaysClasses.forEach((item) => {
+        const isC = item.isCancelled;
+        let state = isC ? "Cancelled" : "Upcoming",
+          dot = isC
+            ? "bg-brandRed shadow-[0_0_15px_rgba(239,68,68,0.4)]"
+            : "bg-zinc-800",
+          cardBorder = isC
+            ? "border-brandRed"
+            : "border-slate-200 dark:border-white/10",
+          icon = isC ? "fa-ban" : "fa-clock",
+          tagStyle = isC
+            ? "bg-brandRed text-white"
+            : "bg-zinc-800 text-zinc-500";
+
+        if (!isC) {
+          if (currentMins >= item.eM) {
+            state = "Done";
+            dot = "bg-brandGreen";
+            cardBorder = "border-brandGreen/40 shadow-brandGreen/5";
+            icon = "fa-check-double";
+            tagStyle = "bg-brandGreen text-white";
+            completedSteps++;
+          } else if (currentMins >= item.sM && currentMins < item.eM) {
+            state = "Ongoing";
+            dot = "bg-brandBlue ring-4 ring-brandBlue/20 scale-105 shadow-xl";
+            cardBorder = "border-brandBlue shadow-xl shadow-brandBlue/5";
+            icon = "fa-satellite-dish";
+            tagStyle = "bg-brandBlue text-white";
+            completedSteps += 0.5;
+          } else {
+            tagStyle =
+              "bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/30";
+            icon = "fa-hourglass-start";
+          }
+        } else {
+          completedSteps += 1; // Mark cancelled as skipped/processed
+        }
+
+        roadmapList.insertAdjacentHTML(
+          "beforeend",
+          `
+                <div class="relative flex items-start gap-4 pb-4 last:pb-2">
+                    <div class="relative z-20 w-11 h-11 rounded-2xl flex items-center justify-center border-4 border-white dark:border-zinc-950 ${dot} transition-all shadow-lg text-white text-[10px]">
+                        <i class="fas ${icon}"></i>
+                    </div>
+                    <div class="flex-grow p-4 rounded-[2rem] border-2 bg-white dark:bg-zinc-900/40 ${cardBorder} transition-all">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-tighter ${isC ? "text-brandRed" : ""}">${item.startRaw} - ${item.endRaw}</span>
+                            <span class="${tagStyle} text-[7px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest">${state}</span>
+                        </div>
+                        <h4 class="font-bold text-slate-900 dark:text-white text-sm leading-tight ${isC ? "line-through text-brandRed" : ""}">${item.subject}</h4>
+                        
+                        ${
+                          isC && item.cancelNote
+                            ? `
+                            <div class="mt-2 p-2 rounded-xl bg-brandRed/5 border border-brandRed/10 flex items-start gap-2">
+                                <i class="fas fa-info-circle text-brandRed text-[10px] mt-0.5"></i>
+                                <p class="text-[10px] font-bold text-brandRed italic uppercase tracking-tight">${item.cancelNote}</p>
+                            </div>
+                        `
+                            : ""
+                        }
+
+                        <div class="flex items-center gap-2 mt-3">
+                            <img src="${item.image || "image/logo.png"}" class="w-7 h-7 rounded-full object-cover border border-slate-200 dark:border-zinc-700 ${isC ? "grayscale" : ""}">
+                            <div class="flex flex-col">
+                                <span class="text-[10px] text-slate-600 dark:text-zinc-400 font-black uppercase truncate">${item.faculty}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`,
+        );
+      });
     } else {
       ongoingSection.classList.add("hidden");
     }
@@ -1166,32 +1336,41 @@ async function updateLiveTimetable() {
     timelineSection.classList.remove("hidden");
     roadmapList.innerHTML = "";
     let completedSteps = 0;
-
     todaysClasses.forEach((item) => {
-      let state = "Upcoming",
-        dot = "bg-zinc-800",
-        cardBorder = "border-slate-200 dark:border-white/10",
-        icon = "fa-clock",
-        tagStyle = "bg-zinc-800 text-zinc-500";
+      const isC = item.isCancelled;
+      // Removed dimming opacity classes
+      let state = isC ? "Cancelled" : "Upcoming",
+        dot = isC
+          ? "bg-brandRed shadow-[0_0_15px_rgba(239,68,68,0.4)]"
+          : "bg-zinc-800",
+        cardBorder = isC
+          ? "border-brandRed"
+          : "border-slate-200 dark:border-white/10",
+        icon = isC ? "fa-ban" : "fa-clock",
+        tagStyle = isC ? "bg-brandRed text-white" : "bg-zinc-800 text-zinc-500";
 
-      if (currentMins >= item.eM) {
-        state = "Done";
-        dot = "bg-brandGreen";
-        cardBorder = "border-brandGreen/40 shadow-lg shadow-brandGreen/5";
-        icon = "fa-check-double";
-        tagStyle = "bg-brandGreen text-white";
-        completedSteps++;
-      } else if (currentMins >= item.sM && currentMins < item.eM) {
-        state = "Ongoing";
-        dot = "bg-brandBlue ring-4 ring-brandBlue/20 scale-105 shadow-xl";
-        cardBorder = "border-brandBlue shadow-xl shadow-brandBlue/5";
-        icon = "fa-satellite-dish";
-        tagStyle = "bg-brandBlue text-white";
-        completedSteps += 0.5;
+      if (!isC) {
+        if (currentMins >= item.eM) {
+          state = "Done";
+          dot = "bg-brandGreen";
+          cardBorder = "border-brandGreen/40 shadow-lg shadow-brandGreen/5";
+          icon = "fa-check-double";
+          tagStyle = "bg-brandGreen text-white";
+          completedSteps++;
+        } else if (currentMins >= item.sM && currentMins < item.eM) {
+          state = "Ongoing";
+          dot = "bg-brandBlue ring-4 ring-brandBlue/20 scale-105 shadow-xl";
+          cardBorder = "border-brandBlue shadow-xl shadow-brandBlue/5";
+          icon = "fa-satellite-dish";
+          tagStyle = "bg-brandBlue text-white";
+          completedSteps += 0.5;
+        } else {
+          tagStyle =
+            "bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/30";
+          icon = "fa-hourglass-start";
+        }
       } else {
-        tagStyle =
-          "bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/30";
-        icon = "fa-hourglass-start";
+        completedSteps += 1;
       }
 
       roadmapList.insertAdjacentHTML(
@@ -1203,19 +1382,18 @@ async function updateLiveTimetable() {
                     </div>
                     <div class="flex-grow p-4 rounded-[2rem] border-2 bg-white dark:bg-zinc-900/40 ${cardBorder} transition-all">
                         <div class="flex justify-between items-center mb-1">
-                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-tighter">${item.startRaw} - ${item.endRaw}</span>
+                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-tighter ${isC ? "text-brandRed" : ""}">${item.startRaw} - ${item.endRaw}</span>
                             <span class="${tagStyle} text-[7px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest">${state}</span>
                         </div>
-                        <h4 class="font-bold text-slate-900 dark:text-white text-sm leading-tight">${item.subject}</h4>
+                        <h4 class="font-bold text-slate-900 dark:text-white text-sm leading-tight ${isC ? "line-through text-brandRed" : ""}">${item.subject}</h4>
                         <div class="flex items-center gap-2 mt-3">
-                            <img src="${item.image || "image/logo.png"}" class="w-7 h-7 rounded-full object-cover border border-slate-200 dark:border-zinc-700">
+                            <img src="${item.image || "image/logo.png"}" class="w-7 h-7 rounded-full object-cover border border-slate-200 dark:border-zinc-700 ${isC ? "grayscale" : ""}">
                             <div class="flex flex-col">
                                 <span class="text-[10px] text-slate-600 dark:text-zinc-400 font-black uppercase truncate">${item.faculty}</span>
                             </div>
                         </div>
                     </div>
-                </div>
-            `,
+                </div>`,
       );
     });
 
@@ -1233,15 +1411,66 @@ async function updateLiveTimetable() {
     console.error("UI Update Failed", e);
   }
 }
+
+// Helper to keep roadmap code clean
+function renderRoadmap(todaysClasses, currentMins) {
+  const roadmapList = document.getElementById("roadmap-list");
+  roadmapList.innerHTML = "";
+  let completedSteps = 0;
+
+  todaysClasses.forEach((item) => {
+    let state = "Upcoming",
+      dot = "bg-zinc-800",
+      cardBorder = "border-slate-200 dark:border-white/10";
+    if (currentMins >= item.eM) {
+      state = "Done";
+      dot = "bg-brandGreen";
+      completedSteps++;
+    } else if (currentMins >= item.sM && currentMins < item.eM) {
+      state = "Ongoing";
+      dot = "bg-brandBlue scale-105";
+      completedSteps += 0.5;
+    }
+
+    roadmapList.insertAdjacentHTML(
+      "beforeend",
+      `
+            <div class="relative flex items-start gap-4 pb-4 last:pb-2">
+                <div class="relative z-20 w-11 h-11 rounded-2xl flex items-center justify-center border-4 border-white dark:border-zinc-950 ${dot} transition-all shadow-lg text-white text-[10px]">
+                    <i class="fas ${state === "Done" ? "fa-check" : "fa-clock"}"></i>
+                </div>
+                <div class="flex-grow p-4 rounded-[2rem] border-2 bg-white dark:bg-zinc-900/40 ${cardBorder}">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">${item.startRaw} - ${item.endRaw}</span>
+                        <span class="text-[7px] font-black px-2 py-0.5 rounded-lg uppercase">${state}</span>
+                    </div>
+                    <h4 class="font-bold text-slate-900 dark:text-white text-sm">${item.subject}</h4>
+                </div>
+            </div>
+        `,
+    );
+  });
+
+  const totalPerc = Math.min(
+    100,
+    Math.round((completedSteps / todaysClasses.length) * 100),
+  );
+  document.getElementById("timeline-progress-bar").style.height =
+    `${totalPerc}%`;
+  document.getElementById("day-progress-text").innerText =
+    `${totalPerc}% COMPLETE`;
+}
 // --- INITIALIZE ALL SYSTEMS ---
 document.addEventListener("DOMContentLoaded", () => {
   // 1. Check for class immediately
   updateLiveTimetable();
 
+  // 2. Start other background services
   fetchAdminNotice();
   renderLocalLogs();
   checkPhysicalFloor();
 
+  // 3. Link the PIN input
   document
     .getElementById("userPinInput")
     .addEventListener("input", validatePinInput);
@@ -1255,12 +1484,15 @@ function launchGoogleLens() {
   const isAndroid = /Android/i.test(navigator.userAgent);
 
   if (isAndroid) {
+    // This specific intent opens the Google App's built-in visual search (Lens mode)
+    // It does NOT require the separate "Google Lens" app.
     const googleAppLensIntent =
       "intent://google.com/searchbyimage/upload#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.SEND;end";
 
     try {
       window.location.href = googleAppLensIntent;
     } catch (e) {
+      // If the intent fails, we open the Google Lens web-view directly
       window.location.href = "https://www.google.com/searchbyimage/upload";
     }
   } else {
@@ -1275,19 +1507,24 @@ function launchIntegratedGoogle() {
   const isAndroid = /Android/i.test(navigator.userAgent);
 
   if (isAndroid) {
+    // This is the direct URI for the Google App's AR Lens Activity
     const directLensIntent = "googlelens://v1/scan";
 
+    // This is the backup Android Intent if the URI scheme is blocked
     const intentURL =
       "intent://scan/#Intent;scheme=googlelens;package=com.google.ar.lens;end";
 
+    // Try the most direct route first
     window.location.href = directLensIntent;
 
+    // If nothing happens in 800ms, try the standard intent
     setTimeout(() => {
       if (document.hasFocus()) {
         window.location.href = intentURL;
       }
     }, 800);
 
+    // Final Fallback: Google Search Upload Page
     setTimeout(() => {
       if (document.hasFocus()) {
         window.location.href = "https://www.google.com/searchbyimage/upload";
@@ -1298,11 +1535,3 @@ function launchIntegratedGoogle() {
     window.location.href = "https://www.google.com/searchbyimage/upload";
   }
 }
-
-let deferredPrompt;
-window.addEventListener("beforeinstallprompt", (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-
-  console.log("PWA ready to install");
-});
