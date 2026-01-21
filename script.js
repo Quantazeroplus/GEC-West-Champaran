@@ -753,10 +753,18 @@ document.getElementById("entryForm").addEventListener("submit", async (e) => {
           body: JSON.stringify(payload),
         });
         const result = await res.json();
+        // ... existing submit logic ...
         if (result.success) {
-          showNotify("Attendance Marked!", "success");
+          const studentName = document.getElementById("name").value;
+
+          // Trigger the Confetti, Voice, and Vibration
+          triggerSuccessFeedback(studentName);
+
+          showNotify("Attendance Verified!", "success");
           saveLogLocally(payload.name, payload.roll, "60");
-          setTimeout(() => location.reload(), 2500);
+
+          // Wait 4 seconds for the animation and voice to finish before reload
+          setTimeout(() => location.reload(), 4000);
         } else {
           showNotify(result.error, "error");
           btn.disabled = false;
@@ -1535,3 +1543,46 @@ function launchIntegratedGoogle() {
     window.location.href = "https://www.google.com/searchbyimage/upload";
   }
 }
+
+// --- SUCCESS FEEDBACK ENGINE ---
+function triggerSuccessFeedback(studentName) {
+  // 1. CONFETTI BURST (Keep your existing confetti logic here)
+  confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+
+  // 2. NATURAL VOICE PROMPT
+  if ("speechSynthesis" in window) {
+    // Cancel any current speech
+    window.speechSynthesis.cancel();
+
+    const msg = new SpeechSynthesisUtterance();
+    msg.text = `Thank you, ${studentName}. I've marked your attendance. Have a great class!`;
+
+    // --- THE "HUMAN" TUNING ---
+    msg.rate = 0.9; // Slightly slower (sounds more relaxed/human)
+    msg.pitch = 1.2; // Slightly higher (sounds friendlier, less like a machine)
+    msg.volume = 1;
+
+    // --- VOICE SELECTION ---
+    let voices = window.speechSynthesis.getVoices();
+
+    // Search for high-quality "Premium" voices first
+    let preferredVoice =
+      voices.find((v) => v.name.includes("Google UK English Female")) ||
+      voices.find((v) => v.name.includes("Google US English")) ||
+      voices.find((v) => v.name.includes("Microsoft Aria")) ||
+      voices.find((v) => v.lang === "en-GB") ||
+      voices[0];
+
+    msg.voice = preferredVoice;
+    window.speechSynthesis.speak(msg);
+  }
+
+  // 3. HAPTIC PATTERN
+  if ("vibrate" in navigator) {
+    navigator.vibrate([100, 50, 100, 50, 200]);
+  }
+}
+// Pre-load voices so they aren't "robotic" on the first try
+window.speechSynthesis.onvoiceschanged = () => {
+  window.speechSynthesis.getVoices();
+};
