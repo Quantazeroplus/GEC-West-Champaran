@@ -31,7 +31,6 @@ async function checkPhysicalFloor() {
           if (diff > 180) diff -= 360;
           if (diff < -180) diff += 360;
 
-          // ADAPTIVE SPEED: Normal speed (0.3) vs Stable near 200° (0.05)
           let dist = Math.abs(liveAlpha - ROOM_60_ANGLE);
           if (dist > 180) dist = 360 - dist;
           let lerpFactor = dist < 30 ? 0.05 : 0.3;
@@ -42,10 +41,8 @@ async function checkPhysicalFloor() {
         const finalHeading = Math.round((smoothedAlpha + 360) % 360);
         magDisplay.innerText = finalHeading;
 
-        // Update rotating needle
         if (needle) needle.style.transform = `rotate(${finalHeading}deg)`;
 
-        // 3. SECURE CALCULATION
         let checkDiff = Math.abs(finalHeading - ROOM_60_ANGLE);
         if (checkDiff > 180) checkDiff = 360 - checkDiff;
 
@@ -65,7 +62,7 @@ async function checkPhysicalFloor() {
     });
   }
 }
-// Start compass engine
+
 checkPhysicalFloor();
 async function runPingFallback() {
   const start = Date.now();
@@ -109,7 +106,6 @@ function checkQRVerification() {
     return true;
   }
 
-  // Check if they scanned recently
   const lastScan = localStorage.getItem("qr_verified_at");
   if (lastScan && Date.now() - lastScan < 300000) {
     return true;
@@ -133,16 +129,13 @@ async function fetchAdminNotice() {
     const notices = data.notices || [];
 
     if (notices.length > 0) {
-      // 1. Get ONLY the absolute latest notice
       const latest = notices[notices.length - 1];
 
-      // Create a unique ID based on message text so we know if they've seen THIS specific one
       const noticeId = btoa(latest.msg.substring(0, 15)).replace(/=/g, "");
 
-      // 2. Check LocalStorage
       if (localStorage.getItem("dismissed_" + noticeId)) {
         console.log("Latest notice already dismissed by user.");
-        // Populate history modal even if main card is hidden
+
         renderHistoryModal(notices);
         return;
       }
@@ -179,7 +172,6 @@ async function fetchAdminNotice() {
                 </div>
             `;
 
-      // 3. ATTACH CLICK EVENT MANUALLY (More reliable than onclick attribute)
       document
         .getElementById("close-notice-btn")
         .addEventListener("click", () => {
@@ -220,7 +212,6 @@ function dismissNotice(noticeId) {
   }, 400);
 }
 
-// Updated Dismiss function to save preference permanently
 function dismissNotice(noticeId) {
   const gridContainer = document.getElementById("noticeGrid");
   gridContainer.style.opacity = "0";
@@ -228,7 +219,7 @@ function dismissNotice(noticeId) {
 
   setTimeout(() => {
     gridContainer.classList.add("hidden");
-    // Save to localStorage so it never shows again on the main screen
+
     localStorage.setItem("seen_notice_" + noticeId, "true");
   }, 400);
 }
@@ -288,6 +279,27 @@ function openHistory(e) {
 function closeHistory() {
   document.getElementById("historyModal").classList.add("hidden");
 }
+
+function openModal(id) {
+  const modal = document.getElementById(id);
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+  if ("vibrate" in navigator) navigator.vibrate(20);
+}
+
+function closeModal(id) {
+  const modal = document.getElementById(id);
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
+}
+
+window.addEventListener("click", function (event) {
+  const terms = document.getElementById("termsModal");
+  const privacy = document.getElementById("privacyModal");
+
+  if (event.target === terms) closeModal("termsModal");
+  if (event.target === privacy) closeModal("privacyModal");
+});
 
 function showGPSStatus() {
   const statusText = document.getElementById("gps-text").innerText;
@@ -518,12 +530,12 @@ navigator.geolocation.watchPosition(
           userPos.lat = pos.coords.latitude;
           userPos.lon = pos.coords.longitude;
 
-          // Update your UI here
+          
           document.getElementById("gps-text").innerText = "GPS ACTIVE";
           document.getElementById("gps-dot").className =
             "relative inline-flex rounded-full h-2.5 w-2.5 bg-brandGreen";
 
-          // Call your logic to check distance
+        
           updateLogic();
         },
         (err) => {
@@ -546,7 +558,7 @@ navigator.geolocation.watchPosition(
     );
     const isScanned = checkQRVerification();
 
-    // 4. UPDATE GAUGE UI
+ 
     document.getElementById("liveDist").innerHTML =
       `${Math.round(dist)}<span class="text-xl font-medium text-slate-400 dark:text-zinc-600 ml-1">m</span>`;
     const percentage = Math.max(0, 100 - dist * (100 / MAX_DIST));
@@ -599,7 +611,7 @@ navigator.geolocation.watchPosition(
       entryForm.classList.add("hidden");
       lockMsg.classList.remove("hidden");
 
-      // Show the specific Layer icon for floor security
+    
       updateLockUI(
         "VERIFYING FLOOR",
         "Hold phone steady infront of QR",
@@ -690,19 +702,44 @@ document.getElementById("roll").addEventListener("blur", async (e) => {
     document.getElementById("email").value = savedData.email || "";
   }
 
-  // 2. Network verification
+  
+  // 2. Network verification with Privacy Lock (Reading from Logs)
   try {
     const res = await fetch(SCRIPT_URL, {
       method: "POST",
-      body: JSON.stringify({ action: "lookup", type: "classroom", roll: roll }),
+      body: JSON.stringify({
+        action: "lookup",
+        roll: roll,
+        deviceId: getDeviceId(),
+      }),
     });
     const data = await res.json();
+    const badge = document.getElementById("new-device-badge");
+
     if (data.user && data.user.found) {
-      document.getElementById("name").value = data.user.name || "";
-      document.getElementById("reg").value = data.user.reg || "";
-      document.getElementById("mobile").value = data.user.mobile || "";
-      document.getElementById("email").value = data.user.email || "";
-      showNotify(`Verified Details: ${data.user.name}`, "success");
+      if (data.user.secured) {
+        // Map the logs data to your form fields
+        document.getElementById("name").value = data.user.name || "";
+        document.getElementById("reg").value = data.user.reg || "";
+        document.getElementById("mobile").value = data.user.mobile || "";
+        document.getElementById("email").value = data.user.email || "";
+
+        if (data.user.isNewDevice) {
+          if (badge) badge.classList.remove("hidden");
+          showNotify("First log for this device. Binding...", "info");
+        } else {
+          if (badge) badge.classList.add("hidden");
+          showNotify(`Welcome back, ${data.user.name}`, "success");
+        }
+      } else {
+        // Privacy trigger if a different device tries to pull this roll number's logs
+        if (badge) badge.classList.add("hidden");
+        showNotify("Privacy Lock: Device mismatch.", "error");
+        document.getElementById("name").value = "";
+        document.getElementById("reg").value = "";
+        document.getElementById("mobile").value = "";
+        document.getElementById("email").value = "";
+      }
     }
   } catch (err) {
     console.warn("Cloud lookup offline");
@@ -784,65 +821,102 @@ document.getElementById("entryForm").addEventListener("submit", async (e) => {
 });
 
 async function getBiometricSignature() {
-  if (!window.PublicKeyCredential) return "NOT_SUPPORTED";
+  if (!window.PublicKeyCredential)
+    return "LEGACY_" + getDeviceId().substring(0, 10);
 
   const rollNo = document.getElementById("roll").value.trim();
-  const regNo = document.getElementById("reg").value.trim();
-  const identityKey = `auth_v3_${rollNo}_${regNo}`; // New versioned key
-
   const challenge = new Uint8Array(32);
   window.crypto.getRandomValues(challenge);
-  const savedKeyId = localStorage.getItem(identityKey);
+
+  // Using a new Version Key (v6) to force all phones to re-register strictly
+  const MASTER_KEY = `gec_strict_v6_${rollNo}`;
+  const savedId = localStorage.getItem(MASTER_KEY);
 
   try {
-    if (!savedKeyId) {
-      // Re-Register if browser data was cleared
+    if (!savedId) {
+      // --- REGISTRATION: Binding the phone with FORCED PIN/BIO ---
       const cred = await navigator.credentials.create({
         publicKey: {
           challenge: challenge,
-          rp: { name: "GECWC Attendance" },
+          rp: { name: "GECWC Secure", id: window.location.hostname },
           user: {
-            id: Uint8Array.from(regNo, (c) => c.charCodeAt(0)),
+            id: Uint8Array.from(rollNo, (c) => c.charCodeAt(0)),
             name: rollNo,
             displayName: rollNo,
           },
           pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-          authenticatorSelection: { userVerification: "required" },
+          authenticatorSelection: {
+            authenticatorAttachment: "platform",
+            userVerification: "required", // MANDATORY
+            residentKey: "required",
+          },
           timeout: 60000,
         },
       });
-      const hashBuffer = await window.crypto.subtle.digest(
-        "SHA-256",
-        cred.response.getPublicKey(),
-      );
-      const hashHex = Array.from(new Uint8Array(hashBuffer))
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
       localStorage.setItem(
-        identityKey,
+        MASTER_KEY,
         btoa(String.fromCharCode(...new Uint8Array(cred.rawId))),
       );
-      return hashHex;
+      return "🧬 [STRICT_BIO_BIND]";
     } else {
+      // --- VERIFICATION: FORCING THE POPUP EVERY TIME ---
       await navigator.credentials.get({
         publicKey: {
           challenge: challenge,
           allowCredentials: [
             {
-              id: Uint8Array.from(atob(savedKeyId), (c) => c.charCodeAt(0)),
+              id: Uint8Array.from(atob(savedId), (c) => c.charCodeAt(0)),
               type: "public-key",
             },
           ],
+       
           userVerification: "required",
         },
       });
-      return "VERIFIED_HW";
+      return "🧬 [BIO_VERIFIED]";
     }
   } catch (e) {
+    console.error("Auth Blocked:", e.name);
+
+
+    if (e.name === "NotAllowedError") {
+      showNotify("Identity Verification Required. Cannot skip!", "error");
+      return null;
+    }
+
+    // Only fallback to Google Passkey if Biometric Hardware is physically missing
+    if (e.name === "NotSupportedError") {
+      return await triggerGooglePasskeyFallback(rollNo, challenge);
+    }
+
     return null;
   }
 }
 
+// Separate helper to trigger the Google Account / Passcode UI
+async function triggerGooglePasskeyFallback(rollNo, challenge) {
+  try {
+    const passCred = await navigator.credentials.create({
+      publicKey: {
+        challenge: challenge,
+        rp: { name: "GECWC Account Mode" },
+        user: {
+          id: Uint8Array.from(rollNo, (c) => c.charCodeAt(0)),
+          name: rollNo,
+          displayName: rollNo,
+        },
+        pubKeyCredParams: [
+          { alg: -7, type: "public-key" },
+          { alg: -257, type: "public-key" },
+        ],
+        authenticatorSelection: { userVerification: "required" },
+      },
+    });
+    return "☁️ [GOOGLE_PASSKEY]";
+  } catch (err) {
+    return null;
+  }
+}
 function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 6371e3;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -1515,17 +1589,17 @@ function launchIntegratedGoogle() {
   const isAndroid = /Android/i.test(navigator.userAgent);
 
   if (isAndroid) {
-    // This is the direct URI for the Google App's AR Lens Activity
+   
     const directLensIntent = "googlelens://v1/scan";
 
     // This is the backup Android Intent if the URI scheme is blocked
     const intentURL =
       "intent://scan/#Intent;scheme=googlelens;package=com.google.ar.lens;end";
 
-    // Try the most direct route first
+
     window.location.href = directLensIntent;
 
-    // If nothing happens in 800ms, try the standard intent
+   
     setTimeout(() => {
       if (document.hasFocus()) {
         window.location.href = intentURL;
@@ -1558,8 +1632,8 @@ function triggerSuccessFeedback(studentName) {
     msg.text = `Thank you, ${studentName}. I've marked your attendance. Have a great class!`;
 
     // --- THE "HUMAN" TUNING ---
-    msg.rate = 0.9; // Slightly slower (sounds more relaxed/human)
-    msg.pitch = 1.2; // Slightly higher (sounds friendlier, less like a machine)
+    msg.rate = 0.9;
+    msg.pitch = 1.2; 
     msg.volume = 1;
 
     // --- VOICE SELECTION ---
@@ -1582,7 +1656,7 @@ function triggerSuccessFeedback(studentName) {
     navigator.vibrate([100, 50, 100, 50, 200]);
   }
 }
-// Pre-load voices so they aren't "robotic" on the first try
+
 window.speechSynthesis.onvoiceschanged = () => {
   window.speechSynthesis.getVoices();
 };
