@@ -615,17 +615,21 @@
                         class="font-black text-slate-900 dark:text-white uppercase text-[11px] mb-3 tracking-tighter flex items-center gap-2">
                         <span
                             class="w-5 h-5 rounded bg-brandBlue/10 text-brandBlue flex items-center justify-center text-[9px]">04</span>
-                        Submission Window
+                        Multiple Submission
                     </h4>
-                    <p>Attendance must be marked within the first 10 minutes of the scheduled lecture. The "Submit"
-                        gateway will automatically lock upon the expiration of the lecture timer. Late submissions due
-                        to technical negligence will not be retroactively corrected.</p>
+                    <p>The system utilizes Collision Detection and Entry Highlighting to manage redundant check-in
+                        attempts. While the interface may permit secondary submissions, the underlying architecture
+                        intelligently identifies these as duplicates and flags them within the cloud ledger. This
+                        ensures that only the initial, cryptographically-verified timestamp remains the primary record,
+                        while subsequent attempts are highlighted for audit purposes to maintain the chronological
+                        integrity of the institutional database."</p>
                 </section>
 
                 <div
                     class="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-dashed border-slate-200 dark:border-zinc-800 text-[10px] italic">
-                    Note: Continued use of this application implies total acceptance of the aforementioned terms as per
-                    the CSE Cyber Security Division guidelines.
+                    Instruction: In cases where the 'Submit' gateway remains locked despite active GPS, a System Refresh
+                    is required. Refreshing the interface re-initializes the location-tracking engine to ensure total
+                    compliance with institutional security guidelines.
                 </div>
             </div>
         </div>
@@ -686,16 +690,88 @@
                 </section>
 
                 <section>
-                    <h4 class="font-black text-slate-900 dark:text-white uppercase text-[11px] mb-3">04. Local Caching &
-                        Statelessness</h4>
-                    <p>The app uses IndexedDB/LocalStorage to save your basic details (Name/Roll) on your device to
-                        speed up the check-in process. You can clear this data at any time via the "Clear Logs" button
-                        in the dashboard.</p>
+                    <h4 class="font-black text-slate-900 dark:text-white uppercase text-[11px] mb-3">04.
+                        Secure Autofill</h4>
+                    <p>The Autofill engine utilizes a Hardware-Validated Lookup Protocol. By binding student PII to a
+                        unique hardware fingerprint at the point of ingestion, the system ensures that sensitive data is
+                        only served to verified devices. This architecture effectively mitigates Insecure Direct Object
+                        Reference (IDOR) vulnerabilities common in web-based registration systems.</p>
+                </section>
+
+                <section>
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-black text-slate-900 dark:text-white uppercase text-[11px]">05. Cryptography
+                            Matrix</h4>
+                        <div
+                            class="flex items-center gap-1.5 px-2 py-1 bg-brandGreen/10 border border-brandGreen/20 rounded-lg">
+                            <div class="w-1.5 h-1.5 bg-brandGreen rounded-full animate-pulse"></div>
+                            <span class="text-[7px] font-black text-brandGreen uppercase tracking-widest">Encrypted &
+                                Verified</span>
+                        </div>
+                    </div>
+
+                    <p class="mb-4 text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">The ecosystem employs a
+                        multi-layered cryptographic stack to ensure the
+                        <strong>Confidentiality, Integrity, and Availability (CIA)</strong> of institutional data.
+                        By utilizing asymmetric key pairs and one-way hashing algorithms, the system creates
+                        a tamper-proof environment for attendance logging.
+                    </p>
+
+                    <div class="overflow-x-auto">
+                        <table
+                            class="w-full text-[9px] border-collapse bg-slate-50/50 dark:bg-white/5 rounded-xl overflow-hidden">
+                            <thead>
+                                <tr
+                                    class="bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white uppercase tracking-widest">
+                                    <th class="p-3 text-left border-b border-slate-200 dark:border-zinc-700">Protocol
+                                    </th>
+                                    <th class="p-3 text-left border-b border-slate-200 dark:border-zinc-700">Mechanism
+                                    </th>
+                                    <th class="p-3 text-left border-b border-slate-200 dark:border-zinc-700">Security
+                                        Objective</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-slate-600 dark:text-zinc-400">
+                                <tr>
+                                    <td
+                                        class="p-3 border-b border-slate-100 dark:border-zinc-800 font-bold text-brandBlue uppercase tracking-tighter">
+                                        WebAuthn / FIDO2</td>
+                                    <td class="p-3 border-b border-slate-100 dark:border-zinc-800">Asymmetric ECDSA /
+                                        RSA</td>
+                                    <td class="p-3 border-b border-slate-100 dark:border-zinc-800">Biometric
+                                        Non-Repudiation</td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        class="p-3 border-b border-slate-100 dark:border-zinc-800 font-bold text-brandBlue uppercase tracking-tighter">
+                                        Device Fingerprint</td>
+                                    <td class="p-3 border-b border-slate-100 dark:border-zinc-800">Cryptographic Hashing
+                                        (SHA-256)</td>
+                                    <td class="p-3 border-b border-slate-100 dark:border-zinc-800">Hardware-Identity
+                                        Masking</td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        class="p-3 border-b border-slate-100 dark:border-zinc-800 font-bold text-brandBlue uppercase tracking-tighter">
+                                        Data Transport</td>
+                                    <td class="p-3 border-b border-slate-100 dark:border-zinc-800">TLS 1.3 / AES-256 GCM
+                                    </td>
+                                    <td class="p-3 border-b border-slate-100 dark:border-zinc-800">
+                                        Anti-Man-in-the-Middle (MITM)</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-bold text-brandBlue uppercase tracking-tighter">Dynamic PIN</td>
+                                    <td class="p-3">Time-Based Salting & Obfuscation</td>
+                                    <td class="p-3">Replay Attack Mitigation</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </section>
 
                 <div class="border-t border-slate-100 dark:border-zinc-800 pt-6 text-[10px] text-slate-400">
-                    For further concerns regarding data ethics, please contact the GEC West Champaran Cyber Security
-                    Research Cell.
+                    Identity architecture is powered by Google Secure Authentication, integrating advanced FIDO2 and
+                    Passkey protocols to establish a robust chain of trust between the user device and the cloud ledger.
                 </div>
             </div>
         </div>
