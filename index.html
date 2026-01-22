@@ -286,7 +286,10 @@
         </div>
 
 
+
+
         <div class="lg:col-span-12 mt-12 mb-10 space-y-4">
+
 
             <div id="ongoing-section" class="hidden animate-slide-up">
                 <div
@@ -414,6 +417,58 @@
                 #roadmap-list>div {
                     margin-right: 4px;
                 }
+
+                @media (max-width: 480px) {
+                    main {
+                        padding-left: 1rem !important;
+                        padding-right: 1rem !important;
+                        padding-top: 6rem !important;
+                        /* Prevents header overlap on small phones */
+                    }
+
+                    /* Targets your large cards to make them fit mobile better */
+                    div[class*="rounded-[2.5rem]"],
+                    .rounded-3xl,
+                    .rounded-\[2\.5rem\] {
+                        border-radius: 1.5rem !important;
+                    }
+
+                    h2 {
+                        font-size: 1.25rem !important;
+                        line-height: 1.75rem !important;
+                    }
+
+                    .text-6xl {
+                        font-size: 3rem !important;
+                        /* Makes the distance number smaller on mobile */
+                    }
+                }
+
+                /* Animated Premium Scrollbar for Modals */
+                .custom-scroll::-webkit-scrollbar {
+                    width: 5px;
+                }
+
+                .custom-scroll::-webkit-scrollbar-track {
+                    background: transparent;
+                    margin: 20px;
+                }
+
+                .custom-scroll::-webkit-scrollbar-thumb {
+                    background: #2563eb;
+                    /* brandBlue */
+                    border-radius: 20px;
+                    border: 2px solid transparent;
+                }
+
+                .dark .custom-scroll::-webkit-scrollbar-thumb {
+                    background: #3b82f6;
+                }
+
+                /* Visual indicator for scrolling */
+                .modal-content-area {
+                    mask-image: linear-gradient(to bottom, black 95%, transparent 100%);
+                }
             </style>
         </div>
 
@@ -431,7 +486,14 @@
                     class="col-span-full text-center py-10 text-slate-400 italic text-sm border-2 border-dashed border-slate-100 dark:border-zinc-800 rounded-3xl">
                     No check-ins recorded on this device yet.</p>
             </div>
-        </div>l
+        </div>
+
+        <div class="mt-8 mb-6 flex flex-row justify-end items-center gap-3 px-4 ml-auto w-fit">
+            <button onclick="openModal('termsModal')"
+                class="text-[9px] font-bold text-slate-400 uppercase tracking-[0.15em] hover:text-brandBlue transition-colors whitespace-nowrap">Terms</button>
+            <span class="w-1 h-1 rounded-full bg-slate-300 dark:bg-zinc-800"></span>
+            <button onclick="openModal('privacyModal')"
+                class="text-[9px] font-bold text-slate-400 uppercase tracking-[0.15em] hover:text-brandBlue transition-colors whitespace-nowrap">Privacy</button>
         </div>
     </main>
 
@@ -488,6 +550,157 @@
             <div>LOCK: <span id="debug-lock" class="text-brandRed">LOCKED</span></div>
         </div>
     </div>
+    <div id="termsModal"
+        class="hidden fixed inset-0 z-[2000] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div
+            class="bg-white dark:bg-darkSurface w-full max-w-[95%] md:max-w-xl rounded-[2rem] border border-slate-200 dark:border-darkBorder shadow-2xl overflow-hidden animate-slide-up">
+            <div
+                class="p-6 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center bg-slate-50/50 dark:bg-white/5">
+                <div>
+                    <h3 class="font-black text-xl tracking-tight dark:text-white leading-none">Terms of Service</h3>
+                    <p class="text-[9px] text-brandBlue font-bold uppercase tracking-widest mt-1">Version 2026.1 - GECWC
+                    </p>
+                </div>
+                <button onclick="closeModal('termsModal')"
+                    class="text-slate-400 hover:text-brandRed transition-all transform hover:rotate-90">
+                    <i class="fas fa-times-circle text-2xl"></i>
+                </button>
+            </div>
+
+            <div
+                class="p-8 max-h-[65vh] overflow-y-auto custom-scroll space-y-8 text-sm text-slate-600 dark:text-zinc-400 leading-relaxed">
+
+                <section>
+                    <h4
+                        class="font-black text-slate-900 dark:text-white uppercase text-[11px] mb-3 tracking-tighter flex items-center gap-2">
+                        <span
+                            class="w-5 h-5 rounded bg-brandBlue/10 text-brandBlue flex items-center justify-center text-[9px]">01</span>
+                        Institutional Authorization
+                    </h4>
+                    <p>By accessing the Smart Attendance Ecosystem, you acknowledge that you are a currently enrolled
+                        student of Government Engineering College, West Champaran. This platform is a proprietary
+                        academic tool. Unauthorized access by third parties or alumni is strictly prohibited and
+                        monitored via hardware-id logging.</p>
+                </section>
+
+                <section>
+                    <h4
+                        class="font-black text-slate-900 dark:text-white uppercase text-[11px] mb-3 tracking-tighter flex items-center gap-2">
+                        <span
+                            class="w-5 h-5 rounded bg-brandBlue/10 text-brandBlue flex items-center justify-center text-[9px]">02</span>
+                        Spatial Integrity & GPS Policy
+                    </h4>
+                    <p>The system utilizes Haversine Telemetry to verify physical presence within the designated
+                        classroom radius (15m). Users agree to maintain High-Accuracy location settings. Any attempt to
+                        obfuscate, spoof, or relay GPS coordinates through VPNs, Proxy Servers, or Developer "Mock
+                        Location" tools will be automatically flagged as "Academic Malpractice" and reported to the Head
+                        of Department.</p>
+                </section>
+
+                <section>
+                    <h4
+                        class="font-black text-slate-900 dark:text-white uppercase text-[11px] mb-3 tracking-tighter flex items-center gap-2">
+                        <span
+                            class="w-5 h-5 rounded bg-brandBlue/10 text-brandBlue flex items-center justify-center text-[9px]">03</span>
+                        Hardware Binding (Anti-Proxy)
+                    </h4>
+                    <p>To prevent proxy attendance, your account is cryptographically bound to your mobile hardware
+                        signature. Logging in on multiple devices or sharing your unique Dynamic PIN with peers
+                        constitutes a breach of the digital code of conduct. One account per physical device is the
+                        strictly enforced standard.</p>
+                </section>
+
+                <section>
+                    <h4
+                        class="font-black text-slate-900 dark:text-white uppercase text-[11px] mb-3 tracking-tighter flex items-center gap-2">
+                        <span
+                            class="w-5 h-5 rounded bg-brandBlue/10 text-brandBlue flex items-center justify-center text-[9px]">04</span>
+                        Submission Window
+                    </h4>
+                    <p>Attendance must be marked within the first 10 minutes of the scheduled lecture. The "Submit"
+                        gateway will automatically lock upon the expiration of the lecture timer. Late submissions due
+                        to technical negligence will not be retroactively corrected.</p>
+                </section>
+
+                <div
+                    class="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-dashed border-slate-200 dark:border-zinc-800 text-[10px] italic">
+                    Note: Continued use of this application implies total acceptance of the aforementioned terms as per
+                    the CSE Cyber Security Division guidelines.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="privacyModal"
+        class="hidden fixed inset-0 z-[2000] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div
+            class="bg-white dark:bg-darkSurface w-full max-w-[95%] md:max-w-xl rounded-[2rem] border border-slate-200 dark:border-darkBorder shadow-2xl overflow-hidden animate-slide-up">
+            <div
+                class="p-6 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center bg-slate-50/50 dark:bg-white/5">
+                <div>
+                    <h3 class="font-black text-xl tracking-tight dark:text-white leading-none">Privacy & Data Ethics
+                    </h3>
+                    <p class="text-[9px] text-brandGreen font-bold uppercase tracking-widest mt-1">Institutional Data
+                        Standard</p>
+                </div>
+                <button onclick="closeModal('privacyModal')"
+                    class="text-slate-400 hover:text-brandRed transition-all transform hover:rotate-90">
+                    <i class="fas fa-times-circle text-2xl"></i>
+                </button>
+            </div>
+
+            <div
+                class="p-8 max-h-[65vh] overflow-y-auto custom-scroll space-y-8 text-sm text-slate-600 dark:text-zinc-400 leading-relaxed">
+
+                <div class="flex items-start gap-4 p-4 rounded-2xl bg-brandGreen/5 border-l-4 border-brandGreen">
+                    <i class="fas fa-shield-halved text-brandGreen text-xl mt-1"></i>
+                    <p class="text-xs font-medium text-brandGreen">This application is designed with "Privacy by Design"
+                        principles. We collect only what is necessary for academic verification.</p>
+                </div>
+
+                <section>
+                    <h4 class="font-black text-slate-900 dark:text-white uppercase text-[11px] mb-3">01. Telemetry Data
+                        Collection</h4>
+                    <p>We process your real-time Latitude and Longitude during the check-in attempt. This data is
+                        converted into a distance vector relative to the classroom coordinates. Precise coordinate
+                        history is <strong>never</strong> recorded; only the "In-Range" or "Out-of-Range" status is
+                        stored in the permanent database.</p>
+                </section>
+
+                <section>
+                    <h4 class="font-black text-slate-900 dark:text-white uppercase text-[11px] mb-3">02. FIDO2 Biometric
+                        Standard</h4>
+                    <p>We utilize the FIDO2 WebAuthn protocol. Your biometric data (fingerprint or face-id) is stored
+                        <strong>exclusively</strong> in your phone's Trusted Execution Environment (TEE). The GECWC
+                        servers only receive a public key signature to verify your identity. No biometric imagery is
+                        transmitted or stored on our servers.
+                    </p>
+                </section>
+
+                <section>
+                    <h4 class="font-black text-slate-900 dark:text-white uppercase text-[11px] mb-3">03. Administrative
+                        Data Access</h4>
+                    <p>Your Roll Number, Name, and Registration details are visible only to authorized faculty members
+                        and the examination department. This data is hosted on Google Cloud Infrastructure with
+                        Restricted IAM access, ensuring protection against unauthorized data leaks.</p>
+                </section>
+
+                <section>
+                    <h4 class="font-black text-slate-900 dark:text-white uppercase text-[11px] mb-3">04. Local Caching &
+                        Statelessness</h4>
+                    <p>The app uses IndexedDB/LocalStorage to save your basic details (Name/Roll) on your device to
+                        speed up the check-in process. You can clear this data at any time via the "Clear Logs" button
+                        in the dashboard.</p>
+                </section>
+
+                <div class="border-t border-slate-100 dark:border-zinc-800 pt-6 text-[10px] text-slate-400">
+                    For further concerns regarding data ethics, please contact the GEC West Champaran Cyber Security
+                    Research Cell.
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 

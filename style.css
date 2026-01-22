@@ -1,129 +1,128 @@
-  .input-group {
-            position: relative;
-            margin-bottom: 1.25rem;
-        }
+.input-group {
+  position: relative;
+  margin-bottom: 1.25rem;
+}
 
-        .input-field {
-            width: 100%;
-            padding: 14px 16px;
-            border: 2px solid #e2e8f0;
-            border-radius: 16px;
-            background: #ffffff;
-            outline: none;
-            transition: all 0.25s ease;
-            font-size: 1rem;
-            color: #18181b;
-            z-index: 10;
-            position: relative;
-        }
+.input-field {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  outline: none;
+  transition: all 0.25s ease;
+  font-size: 1rem;
+  color: #18181b;
+  z-index: 10;
+  position: relative;
+}
 
-        .dark .input-field {
-            background: #0a0a0a;
-            border-color: #262626;
-            color: #ffffff;
-        }
+.dark .input-field {
+  background: #0a0a0a;
+  border-color: #262626;
+  color: #ffffff;
+}
 
-        .input-field:focus {
-            border-color: #2563eb;
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
-        }
+.input-field:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
 
-        .input-label {
-            position: absolute;
-            top: 16px;
-            left: 16px;
-            pointer-events: none;
-            transition: all 0.2s ease;
-            font-size: 0.95rem;
-            z-index: 20;
-        }
+.input-label {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  z-index: 20;
+}
 
-        .label-required {
-            color: #ef4444;
-        }
+.label-required {
+  color: #ef4444;
+}
 
-        .label-optional {
-            color: #10b981;
-        }
+.label-optional {
+  color: #10b981;
+}
 
-        .input-field:focus+.input-label,
-        .input-field:not(:placeholder-shown)+.input-label {
-            top: -10px;
-            left: 12px;
-            font-size: 0.75rem;
-            background: #ffffff;
-            padding: 0 8px;
-            font-weight: 700;
-        }
+.input-field:focus + .input-label,
+.input-field:not(:placeholder-shown) + .input-label {
+  top: -10px;
+  left: 12px;
+  font-size: 0.75rem;
+  background: #ffffff;
+  padding: 0 8px;
+  font-weight: 700;
+}
 
-        .dark .input-field:focus+.input-label,
-        .dark .input-field:not(:placeholder-shown)+.input-label {
-            background: #121212;
-        }
+.dark .input-field:focus + .input-label,
+.dark .input-field:not(:placeholder-shown) + .input-label {
+  background: #121212;
+}
 
-        .input-field:focus+.label-required {
-            color: #ef4444 !important;
-        }
+.input-field:focus + .label-required {
+  color: #ef4444 !important;
+}
 
-        .input-field:focus+.label-optional {
-            color: #10b981 !important;
-        }
+.input-field:focus + .label-optional {
+  color: #10b981 !important;
+}
 
-        #map {
-            border-radius: 20px;
-            height: 200px;
-            width: 100%;
-            border: 1px solid #e2e8f0;
-        }
+#map {
+  border-radius: 20px;
+  height: 200px;
+  width: 100%;
+  border: 1px solid #e2e8f0;
+}
 
-        .dark #map {
-            filter: invert(100%) hue-rotate(180deg) brightness(105%) contrast(85%);
-            border-color: #262626;
-        }
+.dark #map {
+  filter: invert(100%) hue-rotate(180deg) brightness(105%) contrast(85%);
+  border-color: #262626;
+}
 
-        .dist-gauge {
-            transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
+.dist-gauge {
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
 
-        .premium-logo {
-            filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.15));
-            transition: transform 0.3s ease;
-            max-width: none;
-            z-index: 60;
-        }
+.premium-logo {
+  filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.15));
+  transition: transform 0.3s ease;
+  max-width: none;
+  z-index: 60;
+}
 
-        @media (max-width: 640px) {
-            .input-field {
-                font-size: 16px;
-            }
+@media (max-width: 640px) {
+  .input-field {
+    font-size: 16px;
+  }
 
-            #map {
-                height: 160px;
-            }
+  #map {
+    height: 160px;
+  }
 
-            .premium-logo {
-                width: 140px !important;
-                height: 140px !important;
-            }
-        }
+  .premium-logo {
+    width: 140px !important;
+    height: 140px !important;
+  }
+}
 
-        @keyframes shake {
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
 
-            0%,
-            100% {
-                transform: translateX(0);
-            }
+  25% {
+    transform: translateX(-8px);
+  }
 
-            25% {
-                transform: translateX(-8px);
-            }
+  75% {
+    transform: translateX(8px);
+  }
+}
 
-            75% {
-                transform: translateX(8px);
-            }
-        }
-
-        .animate-shake {
-            animation: shake 0.2s ease-in-out 0s 2;
-            border-color: #ef4444 !important;
-        }
+.animate-shake {
+  animation: shake 0.2s ease-in-out 0s 2;
+  border-color: #ef4444 !important;
+}
