@@ -778,6 +778,7 @@ document.getElementById("entryForm").addEventListener("submit", async (e) => {
         reg: document.getElementById("reg").value,
         mobile: document.getElementById("mobile").value,
         email: document.getElementById("email").value,
+        note: document.getElementById("note").value,
         lat: pos.coords.latitude,
         lon: pos.coords.longitude,
         deviceId: getDeviceId(),
