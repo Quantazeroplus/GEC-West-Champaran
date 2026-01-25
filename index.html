@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GEC WC | Smart Attendance</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="apple-touch-icon" href="image/logo-512.png">
+    <link rel="icon" type="image/png" href="image/logo-512.png">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Playfair+Display:ital,wght@1,600&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Poppins', 'sans-serif'] },
+                    colors: {
+                        brandBlue: '#2563eb',
+                        brandGreen: '#10b981',
+                        brandRed: '#ef4444',
+                        amoled: '#000000',
+                        darkSurface: '#121212',
+                        darkBorder: '#262626'
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'slide-up': 'slideUp 0.4s ease-out forwards',
+                    },
+                    keyframes: {
+                        slideUp: { '0%': { transform: 'translateY(15px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } }
+                    }
+                }
+            }
+        }
+    </script>
+
+</head>
+
+<body
+    class="bg-slate-50 dark:bg-amoled text-slate-900 dark:text-zinc-100 antialiased min-h-screen selection:bg-brandBlue/30 transition-colors duration-300">
+
+    <div id="noticeGrid" class="hidden fixed top-20 left-0 w-full px-4 py-4 z-[100] pointer-events-none">
+        <div id="gridItems" class="max-w-md mx-auto pointer-events-auto">
+        </div>
+    </div>
+
+
+    <div id="notification"
+        class="fixed top-4 left-1/2 -translate-x-1/2 z-[3000] opacity-0 pointer-events-none transform -translate-y-2 transition-all duration-300 w-[90%] max-w-sm">
+        <div id="notifyContent"
+            class="px-5 py-3 rounded-2xl shadow-2xl font-bold text-sm text-center border backdrop-blur-xl"></div>
+    </div>
+
+    <nav
+        class="bg-white/90 dark:bg-black/80 backdrop-blur-lg fixed top-0 w-full z-50 border-b border-slate-200 dark:border-zinc-800/50 h-16 md:h-20">
+        <div class="container mx-auto px-4 h-full flex justify-between items-center relative">
+            <div class="flex items-center h-full">
+                <div class="relative flex items-center justify-center w-16 md:w-24 h-full">
+                    <img src="image/logo.png" alt="GEC WC Logo"
+                        class="premium-logo absolute w-24 h-24 md:w-48 md:h-48 object-contain"
+                        onerror="this.src='https://via.placeholder.com/200?text=GEC'">
+                </div>
+                <div class="flex flex-col ml-3 md:ml-6">
+                    <span
+                        class="text-xl md:text-2xl font-black tracking-tight uppercase leading-none text-slate-900 dark:text-white">GEC<span
+                            class="text-brandBlue">WC</span></span>
+                    <span class="text-[8px] md:text-[10px] font-bold text-slate-400 tracking-[0.2em] uppercase">CSE
+                        Cyber Security</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 md:gap-3">
+                <div onclick="showGPSStatus()"
+                    class="flex items-center gap-2 bg-slate-100 dark:bg-zinc-900 px-2 md:px-3 py-1.5 rounded-full border border-slate-200 dark:border-zinc-800 cursor-pointer active:scale-95 transition-transform">
+                    <div class="relative flex h-2.5 w-2.5">
+                        <span id="gps-ping"
+                            class="hidden absolute inline-flex h-full w-full rounded-full bg-brandGreen opacity-75 animate-ping"></span>
+                        <span id="gps-dot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-400"></span>
+                    </div>
+                    <span id="gps-text"
+                        class="hidden md:block text-[9px] font-black uppercase tracking-widest text-zinc-500">GPS
+                        IDLE</span>
+                </div>
+
+                <div id="qr-status"
+                    class="hidden flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-full border border-blue-100 dark:border-blue-800">
+                    <div class="relative flex h-2 w-2">
+                        <span
+                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                    </div>
+                    <span class="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">QR
+                        VERIFIED</span>
+                </div>
+
+                <button onclick="openHistory(event)"
+                    class="relative w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-blue-400 border border-slate-200 dark:border-zinc-800 transition-all">
+                    <i class="fas fa-bell"></i>
+                    <span id="notif-badge"
+                        class="hidden absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-black"></span>
+                </button>
+
+                <button onclick="toggleTheme()"
+                    class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-yellow-400 border border-slate-200 dark:border-zinc-800 transition-all">
+                    <i id="theme-icon" class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+
+    <div id="historyModal"
+        class="hidden fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-white dark:bg-darkSurface w-full max-w-md rounded-[2.5rem] border border-slate-200 dark:border-darkBorder shadow-2xl overflow-hidden">
+            <div class="p-6 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center">
+                <h3 class="font-black text-xl tracking-tight dark:text-white">Notice Center</h3>
+                <button onclick="closeHistory()" class="text-slate-400 hover:text-brandRed transition-colors">
+                    <i class="fas fa-times-circle text-2xl"></i>
+                </button>
+            </div>
+            <div id="historyList" class="max-h-[60vh] overflow-y-auto p-4 space-y-3"></div>
+        </div>
+    </div>
+
+    <main class="container mx-auto max-w-5xl pt-32 md:pt-48 pb-10 px-4 md:px-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+
+            <div class="lg:col-span-5 space-y-6">
+                <div
+                    class="bg-white dark:bg-darkSurface p-5 md:p-6 rounded-[2.5rem] border border-slate-200 dark:border-darkBorder shadow-lg dark:shadow-[0_0_50px_rgba(0,0,0,0.5)] animate-slide-up">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-slate-400 dark:text-zinc-500 text-sm uppercase tracking-widest">
+                            <i class="fas fa-satellite-dish mr-2 text-brandBlue"></i> Proximity
+                        </h3>
+                        <span id="range-tag"
+                            class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-brandRed/10 text-brandRed border border-brandRed/20">OUT
+                            OF RANGE</span>
+                    </div>
+
+                    <div id="proximity-card"
+                        class="relative bg-slate-50 dark:bg-black rounded-3xl p-6 text-center overflow-hidden mb-5 border border-slate-200 dark:border-zinc-800 transition-colors duration-500">
+                        <p class="text-slate-500 dark:text-zinc-500 text-[10px] uppercase font-bold mb-1">Distance to
+                            Class</p>
+                        <div id="liveDist"
+                            class="text-6xl font-black text-slate-900 dark:text-white mb-3 tracking-tighter">--<span
+                                class="text-xl font-medium text-slate-400 dark:text-zinc-600 ml-1">m</span></div>
+
+                        <div
+                            class="w-full bg-slate-200 dark:bg-zinc-900 h-2.5 rounded-full overflow-hidden border border-slate-100 dark:border-zinc-800">
+                            <div id="distBar" class="dist-gauge h-full bg-brandRed w-0"></div>
+                        </div>
+                    </div>
+
+                    <div id="map"></div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-7">
+                <div
+                    class="bg-white dark:bg-darkSurface p-6 md:p-10 rounded-[2.5rem] border border-slate-200 dark:border-darkBorder shadow-lg dark:shadow-[0_0_50px_rgba(0,0,0,0.5)] relative overflow-hidden h-full">
+
+                    <div
+                        class="absolute -bottom-10 -right-10 opacity-[0.04] dark:opacity-[0.08] pointer-events-none transform rotate-12 z-0">
+                        <i class="fas fa-fingerprint text-[20rem]"></i>
+                    </div>
+
+                    <div class="absolute top-0 right-0 p-6 z-20">
+                        <div
+                            class="bg-brandBlue/10 dark:bg-brandBlue/20 border border-brandBlue/30 text-brandBlue px-2 py-1 rounded-full font-black text-xs tracking-widest uppercase">
+                            Room no:60
+                        </div>
+                    </div>
+
+                    <div class="mb-8 relative z-10">
+                        <h2 class="text-3xl font-black mb-0 text-slate-900 dark:text-white">Attendance</h2>
+                        <!-- Added CSE Cyber Security Label -->
+                        <div class="text-[10px] font-bold text-brandBlue uppercase tracking-[0.2em] mb-2">CSE Cyber
+                            Security</div>
+                        <p class="text-slate-500 dark:text-zinc-400 text-sm">Register your presence for class.</p>
+                    </div>
+
+                    <form id="entryForm" class="hidden animate-slide-up space-y-2 relative z-10">
+                        <div class="input-group">
+                            <input type="text" id="roll" name="roll" class="input-field peer" placeholder=" " required
+                                onfocus="primeHaptics()">
+                            <label for="roll" class="input-label label-required"><i
+                                    class="fas fa-id-badge mr-2 opacity-50"></i>Roll Number *</label>
+                        </div>
+
+                        <div id="form-content" class="space-y-4">
+                            <div class="input-group">
+                                <input type="text" id="name" name="name" class="input-field peer" placeholder=" "
+                                    required onfocus="primeHaptics()">
+                                <label for="name" class="input-label label-required">
+                                    Full Name * <span id="new-device-badge"
+                                        class="hidden ml-2 px-2 py-0.5 bg-brandBlue/10 text-brandBlue text-[8px] rounded-full animate-pulse">NEW
+                                        DEVICE BINDING</span>
+                                </label>
+                            </div>
+
+                            <div class="input-group">
+                                <input type="text" id="reg" name="reg" class="input-field peer" placeholder=" " required
+                                    onfocus="primeHaptics()">
+                                <label for="reg" class="input-label label-required">Registration No. *</label>
+                            </div>
+
+                            <div class="grid grid-cols-1 gap-4">
+                                <div class="input-group">
+                                    <input type="email" id="email" name="email" class="input-field peer" placeholder=" "
+                                        required onfocus="primeHaptics()">
+                                    <label for="email" class="input-label label-required">Email Address *</label>
+                                </div>
+
+                                <div class="input-group">
+                                    <input type="tel" id="mobile" name="mobile" class="input-field peer" placeholder=" "
+                                        onfocus="primeHaptics()">
+                                    <label for="mobile" class="input-label label-optional">Mobile (Optional)</label>
+                                </div>
+                            </div>
+
+                            <div class="input-group">
+                                <textarea id="note" name="note" class="input-field h-24 peer py-4 resize-none"
+                                    placeholder=" " onfocus="primeHaptics()"></textarea>
+                                <label for="note" class="input-label label-optional">Special Note (Optional)</label>
+                            </div>
+                        </div>
+                        <div
+                            class="bg-slate-50 dark:bg-zinc-900/50 p-4 rounded-3xl border border-slate-100 dark:border-zinc-800 mb-6">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-brandBlue">Security
+                                    PIN</span>
+                                <span id="pin-timer" class="text-[10px] font-bold text-slate-400">Refreshes in:
+                                    --:--</span>
+                            </div>
+
+                            <div class="flex items-center gap-3">
+                                <div id="pinDisplay"
+                                    class="bg-white dark:bg-black px-4 py-3 rounded-2xl font-black text-2xl text-brandBlue border-2 border-dashed border-brandBlue/30 select-none animate-pulse">
+                                    ----
+                                </div>
+
+                                <div class="flex-grow relative">
+                                    <input type="text" id="userPinInput" maxlength="4"
+                                        class="input-field !mb-0 text-center font-bold tracking-[0.5em]"
+                                        placeholder="TYPE PIN" autocomplete="off">
+                                </div>
+                            </div>
+                            <p class="text-[9px] text-slate-400 mt-2 text-center font-medium uppercase">Enter the code
+                                shown on the left to verify presence</p>
+                        </div>
+
+
+
+                        <button type="submit" id="submitBtn" disabled
+                            class="w-full bg-brandBlue opacity-50 cursor-not-allowed text-white py-5 rounded-2xl font-black text-lg shadow-lg transition-all flex items-center justify-center gap-3">
+                            <span>MARK ATTENDANCE</span>
+                            <i class="fas fa-lock" id="btn-lock-icon"></i>
+                        </button>
+                    </form>
+
+                    <div id="lockMessage" class="py-16 text-center space-y-6 relative z-10">
+                        <div
+                            class="w-24 h-24 bg-slate-50 dark:bg-zinc-900 rounded-full flex items-center justify-center mx-auto border border-slate-200 dark:border-zinc-800 shadow-inner">
+                            <i class="fas fa-location-dot text-brandRed text-4xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-brandRed font-black text-xl uppercase tracking-tighter">Access Denied</p>
+                            <p class="text-slate-500 dark:text-zinc-400 text-sm mt-1">Please move within 15m of
+                                Room-no: 60
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+
+        <div class="lg:col-span-12 mt-12 mb-10 space-y-4">
+
+
+            <div id="ongoing-section" class="hidden animate-slide-up">
+                <div
+                    class="relative overflow-hidden bg-white dark:bg-zinc-950 p-5 md:p-6 rounded-[2.5rem] border border-slate-200 dark:border-white/10 shadow-2xl">
+                    <div class="absolute -top-10 -right-10 w-32 h-32 bg-brandBlue/10 blur-[50px] rounded-full"></div>
+
+                    <div class="relative z-10 flex flex-col md:flex-row items-center gap-6">
+                        <div class="relative flex-shrink-0">
+                            <div
+                                class="w-24 h-24 rounded-[2rem] overflow-hidden border-2 border-white dark:border-zinc-800 shadow-xl bg-white">
+                                <img id="active-teacher-img" src="image/logo.png" class="w-full h-full object-cover">
+                            </div>
+                            <div id="active-badge"
+                                class="absolute -bottom-1 -right-1 text-white text-[8px] font-black px-3 py-1 rounded-xl border-2 border-white dark:border-zinc-950 shadow-lg uppercase">
+                                --</div>
+                        </div>
+
+                        <div class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                            <div>
+                                <div id="status-tag-container"
+                                    class="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-2 border">
+                                    <span class="relative flex h-2 w-2">
+                                        <span id="ping-ring"
+                                            class="absolute inline-flex h-full w-full rounded-full opacity-75"></span>
+                                        <span id="ping-dot" class="relative inline-flex rounded-full h-2 w-2"></span>
+                                    </span>
+                                    <span class="text-[9px] font-black uppercase tracking-widest"
+                                        id="status-text">--</span>
+                                </div>
+                                <h2 id="active-subject"
+                                    class="text-2xl font-black text-slate-900 dark:text-white leading-tight truncate">
+                                    ---</h2>
+                                <div class="flex items-center gap-3 mt-1">
+                                    <p id="active-faculty"
+                                        class="text-slate-500 dark:text-zinc-400 font-bold text-[9px] uppercase tracking-widest truncate">
+                                        ---</p>
+                                    <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                                    <p class="text-brandBlue font-black text-[9px] uppercase tracking-widest">Room 60
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div
+                                class="bg-slate-50 dark:bg-white/[0.03] p-4 rounded-3xl border border-slate-100 dark:border-white/5 flex flex-col justify-center">
+                                <div class="flex justify-between items-end mb-1">
+                                    <p class="text-[8px] font-black text-slate-400 uppercase">Session Timer</p>
+                                    <div id="active-countdown"
+                                        class="text-sm font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
+                                        --:--</div>
+                                </div>
+                                <div class="w-full h-1.5 bg-slate-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                                    <div id="active-class-progress"
+                                        class="h-full rounded-full transition-all duration-1000" style="width: 0%">
+                                    </div>
+                                </div>
+                                <div class="flex justify-between mt-1 text-[7px] font-black text-slate-400 uppercase">
+                                    <span id="active-start-label">--:--</span>
+                                    <span id="active-end-label">--:--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="timeline-section" class="lg:col-span-12 hidden animate-slide-up mb-12">
+                <div
+                    class="bg-white dark:bg-zinc-950 p-6 pr-0 md:p-8 md:pr-0 rounded-[2.5rem] border-2 border-slate-200 dark:border-white/10 shadow-xl relative w-full overflow-hidden">
+
+                    <div class="flex items-center justify-between mb-8 px-2 pr-6">
+                        <div>
+                            <h3 class="font-black text-xl text-slate-900 dark:text-white tracking-tight">Today's Journey
+                            </h3>
+                            <p class="text-[9px] text-brandBlue font-black uppercase tracking-[0.2em]">Live Tracking
+                                Enabled</p>
+                        </div>
+                        <div id="day-progress-text"
+                            class="px-4 py-1.5 rounded-xl font-black text-[9px] uppercase tracking-widest border-2">--
+                        </div>
+                    </div>
+
+                    <div class="relative px-2">
+                        <div
+                            class="absolute left-[24px] top-4 bottom-4 w-[3px] bg-slate-100 dark:bg-zinc-900 rounded-full">
+                        </div>
+                        <div id="timeline-progress-bar"
+                            class="absolute left-[24px] top-4 w-[3px] bg-gradient-to-b from-brandBlue to-brandGreen transition-all duration-1000 z-[10] rounded-full shadow-[0_0_10px_rgba(37,99,235,0.3)]">
+                        </div>
+
+                        <div id="roadmap-list"
+                            class="relative space-y-4 max-h-[500px] overflow-y-auto pr-6 pl-0  custom-scrollbar scroll-smooth">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <style>
+                /* Absolute Right Scrollbar Styling */
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 5px;
+                    /* Very thin */
+                }
+
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                    /* Makes it look like it's floating */
+                    margin-top: 10px;
+                    /* Optional: padding from top border */
+                    margin-bottom: 10px;
+                    /* Optional: padding from bottom border */
+                }
+
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #2563eb;
+                    /* Brand Blue color */
+                    border-radius: 20px;
+                }
+
+                .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #590228b5;
+                    /* Zinc color for dark mode */
+                }
+
+                /* Keep content from overlapping the absolute scrollbar */
+                #roadmap-list>div {
+                    margin-right: 4px;
+                }
+
+                @media (max-width: 480px) {
+                    main {
+                        padding-left: 1rem !important;
+                        padding-right: 1rem !important;
+                        padding-top: 6rem !important;
+                        /* Prevents header overlap on small phones */
+                    }
+
+                    /* Targets your large cards to make them fit mobile better */
+                    div[class*="rounded-[2.5rem]"],
+                    .rounded-3xl,
+                    .rounded-\[2\.5rem\] {
+                        border-radius: 1.5rem !important;
+                    }
+
+                    h2 {
+                        font-size: 1.25rem !important;
+                        line-height: 1.75rem !important;
+                    }
+
+                    .text-6xl {
+                        font-size: 3rem !important;
+                        /* Makes the distance number smaller on mobile */
+                    }
+                }
+
+                /* Animated Premium Scrollbar for Modals */
+                .custom-scroll::-webkit-scrollbar {
+                    width: 5px;
+                }
+
+                .custom-scroll::-webkit-scrollbar-track {
+                    background: transparent;
+                    margin: 20px;
+                }
+
+                .custom-scroll::-webkit-scrollbar-thumb {
+                    background: #2563eb;
+                    /* brandBlue */
+                    border-radius: 20px;
+                    border: 2px solid transparent;
+                }
+
+                .dark .custom-scroll::-webkit-scrollbar-thumb {
+                    background: #3b82f6;
+                }
+
+                /* Visual indicator for scrolling */
+                .modal-content-area {
+                    mask-image: linear-gradient(to bottom, black 95%, transparent 100%);
+                }
+            </style>
+        </div>
+
+        <div
+            class="bg-white dark:bg-darkSurface p-6 rounded-[2.5rem] border border-slate-200 dark:border-darkBorder shadow-lg space-y-4">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="font-black text-xl tracking-tight"><i class="fas fa-history mr-2 text-brandBlue"></i>
+                    Your Recent Logs</h3>
+                <button onclick="clearMyHistory()"
+                    class="text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-brandRed transition-colors">Clear
+                    History</button>
+            </div>
+            <div id="localLogsList" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <p id="noLogsMsg"
+                    class="col-span-full text-center py-10 text-slate-400 italic text-sm border-2 border-dashed border-slate-100 dark:border-zinc-800 rounded-3xl">
+                    No check-ins recorded on this device yet.</p>
+            </div>
+        </div>
+
+        <div class="mt-8 mb-6 flex flex-row justify-end items-center gap-3 px-4 ml-auto w-fit">
+            <button onclick="openModal('termsModal')"
+                class="text-[9px] font-bold text-slate-400 uppercase tracking-[0.15em] hover:text-brandBlue transition-colors whitespace-nowrap">Terms</button>
+            <span class="w-1 h-1 rounded-full bg-slate-300 dark:bg-zinc-800"></span>
+            <button onclick="openModal('privacyModal')"
+                class="text-[9px] font-bold text-slate-400 uppercase tracking-[0.15em] hover:text-brandBlue transition-colors whitespace-nowrap">Privacy</button>
+        </div>
+    </main>
+
+    <div id="historyModal"
+        class="hidden fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-white dark:bg-darkSurface w-full max-w-md rounded-[2.5rem] border border-slate-200 dark:border-darkBorder shadow-2xl overflow-hidden animate-slide-up">
+            <div class="p-6 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center">
+                <h3 class="font-black text-xl tracking-tight text-slate-900 dark:text-white">Notice History</h3>
+                <button onclick="closeHistory()" class="text-slate-400 hover:text-brandRed transition-colors">
+                    <i class="fas fa-times-circle text-2xl"></i>
+                </button>
+            </div>
+            <div id="historyList" class="max-h-[60vh] overflow-y-auto p-4 space-y-3">
+                <p class="text-center text-slate-400 py-10">No older notifications.</p>
+            </div>
+        </div>
+    </div>
+    <div id="clearConfirmModal"
+        class="hidden fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-white dark:bg-darkSurface w-full max-w-xs rounded-[2.5rem] border border-slate-200 dark:border-darkBorder shadow-2xl p-8 text-center animate-slide-up">
+            <div
+                class="w-16 h-16 bg-brandRed/10 text-brandRed rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-trash-alt text-2xl"></i>
+            </div>
+            <h3 class="font-black text-xl mb-2 text-slate-900 dark:text-white">Clear History?</h3>
+            <p class="text-slate-500 dark:text-zinc-400 text-xs mb-8">This will delete your local logs permanently. This
+                action cannot be undone.</p>
+
+            <div class="flex flex-col gap-3">
+                <button onclick="executeClearHistory()"
+                    class="w-full bg-brandRed text-white py-4 rounded-2xl font-black text-sm shadow-lg shadow-brandRed/20 active:scale-95 transition-all">
+                    YES, DELETE ALL
+                </button>
+                <button onclick="closeClearModal()"
+                    class="w-full bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 py-4 rounded-2xl font-black text-sm active:scale-95 transition-all">
+                    CANCEL
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="debug-box"
+        class="fixed bottom-4 left-4 z-[500] bg-black/80 text-white p-3 rounded-2xl text-[10px] font-mono border border-white/20 backdrop-blur-md flex items-center gap-3">
+
+        <div id="compass-needle" class="w-6 h-6 flex items-center justify-center transition-transform duration-100">
+            <i class="fas fa-location-arrow text-brandBlue" style="transform: rotate(-45deg);"></i>
+        </div>
+
+        <div>
+            <div>HEADING: <span id="debug-mag">--</span>°
+                <span id="ping-area">| PING: <span id="debug-ping">--</span> ms</span>
+            </div>
+            <div>LOCK: <span id="debug-lock" class="text-brandRed">LOCKED</span></div>
+        </div>
+    </div>
+    <div id="termsModal"
+        class="hidden fixed inset-0 z-[2000] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div
+            class="bg-white dark:bg-darkSurface w-full max-w-[95%] md:max-w-xl rounded-[2rem] border border-slate-200 dark:border-darkBorder shadow-2xl overflow-hidden animate-slide-up">
+            <div
+                class="p-6 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center bg-slate-50/50 dark:bg-white/5">
+                <div>
+                    <h3 class="font-black text-xl tracking-tight dark:text-white leading-none">Terms of Service</h3>
+                    <p class="text-[9px] text-brandBlue font-bold uppercase tracking-widest mt-1">Version 2026.1 - GECWC
+                    </p>
+                </div>
+                <button onclick="closeModal('termsModal')"
+                    class="text-slate-400 hover:text-brandRed transition-all transform hover:rotate-90">
+                    <i class="fas fa-times-circle text-2xl"></i>
+                </button>
+            </div>
+
+            <div
+                class="p-8 max-h-[65vh] overflow-y-auto custom-scroll space-y-8 text-sm text-slate-600 dark:text-zinc-400 leading-relaxed">
+
+                <section>
+                    <h4
+                        class="font-black text-slate-900 dark:text-white uppercase text-[11px] mb-3 tracking-tighter flex items-center gap-2">
+                        <span
+                            class="w-5 h-5 rounded bg-brandBlue/10 text-brandBlue flex items-center justify-center text-[9px]">01</span>
+                        Institutional Authorization
+                    </h4>
+                    <p>By accessing the Smart Attendance Ecosystem, you acknowledge that you are a currently enrolled
+                        student of Government Engineering College, West Champaran. This platform is a proprietary
+                        academic tool. Unauthorized access by third parties or alumni is strictly prohibited and
+                        monitored via hardware-id logging.</p>
+                </section>
+
+                <section>
+                    <h4
+                        class="font-black text-slate-900 dark:text-white uppercase text-[11px] mb-3 tracking-tighter flex items-center gap-2">
+                        <span
+                            class="w-5 h-5 rounded bg-brandBlue/10 text-brandBlue flex items-center justify-center text-[9px]">02</span>
+                        Spatial Integrity & GPS Policy
+                    </h4>
+                    <p>The system utilizes Haversine Telemetry to verify physical presence within the designated
+                        classroom radius (15m). Users agree to maintain High-Accuracy location settings. Any attempt to
+                        obfuscate, spoof, or relay GPS coordinates through VPNs, Proxy Servers, or Developer "Mock
+                        Location" tools will be automatically flagged as "Academic Malpractice" and reported to the Head
+                        of Department.</p>
+                </section>
+
+                <section>
+                    <h4
+                        class="font-black text-slate-900 dark:text-white uppercase text-[11px] mb-3 tracking-tighter flex items-center gap-2">
+                        <span
+                            class="w-5 h-5 rounded bg-brandBlue/10 text-brandBlue flex items-center justify-center text-[9px]">03</span>
+                        Hardware Binding (Anti-Proxy)
+                    </h4>
+                    <p>To prevent proxy attendance, your account is cryptographically bound to your mobile hardware
+                        signature. Logging in on multiple devices or sharing your unique Dynamic PIN with peers
+                        constitutes a breach of the digital code of conduct. One account per physical device is the
+                        strictly enforced standard.</p>
+                </section>
+
+                <section>
+                    <h4
+                        class="font-black text-slate-900 dark:text-white uppercase text-[11px] mb-3 tracking-tighter flex items-center gap-2">
+                        <span
+                            class="w-5 h-5 rounded bg-brandBlue/10 text-brandBlue flex items-center justify-center text-[9px]">04</span>
+                        Multiple Submission
+                    </h4>
+                    <p>The system utilizes Collision Detection and Entry Highlighting to manage redundant check-in
+                        attempts. While the interface may permit secondary submissions, the underlying architecture
+                        intelligently identifies these as duplicates and flags them within the cloud ledger. This
+                        ensures that only the initial, cryptographically-verified timestamp remains the primary record,
+                        while subsequent attempts are highlighted for audit purposes to maintain the chronological
+                        integrity of the institutional database."</p>
+                </section>
+
+                <section>
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-black text-slate-900 dark:text-white uppercase text-[11px]">08. Feature
+                            Operational Guide</h4>
+                        <div
+                            class="flex items-center gap-1.5 px-2 py-1 bg-brandBlue/10 border border-brandBlue/20 rounded-lg">
+                            <i class="fas fa-book-reader text-[8px] text-brandBlue"></i>
+                            <span class="text-[7px] font-black text-brandBlue uppercase tracking-widest">User
+                                Instruction Manual</span>
+                        </div>
+                    </div>
+
+                    <p class="mb-4 text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
+                        The following matrix outlines the standard operating procedures for the <strong>GECWC Smart
+                            Attendance Portal</strong> features. Compliance with these steps is required for successful
+                        ledger entry.
+                    </p>
+
+                    <div class="overflow-x-auto">
+                        <table
+                            class="w-full text-[9px] border-collapse bg-slate-50/50 dark:bg-white/5 rounded-xl overflow-hidden">
+                            <thead>
+                                <tr
+                                    class="bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white uppercase tracking-widest">
+                                    <th class="p-3 text-left border-b border-slate-200 dark:border-zinc-700">Feature
+                                    </th>
+                                    <th class="p-3 text-left border-b border-slate-200 dark:border-zinc-700">User Action
+                                    </th>
+                                    <th class="p-3 text-left border-b border-slate-200 dark:border-zinc-700">System
+                                        Result</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-slate-600 dark:text-zinc-400">
+                                <tr>
+                                    <td
+                                        class="p-3 border-b border-slate-100 dark:border-zinc-800 font-bold text-brandBlue uppercase tracking-tighter">
+                                        Identity Input</td>
+                                    <td class="p-3 border-b border-slate-100 dark:border-zinc-800">Enter Roll No. & Exit
+                                        Field</td>
+                                    <td class="p-3 border-b border-slate-100 dark:border-zinc-800">Secure PII Autofill
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        class="p-3 border-b border-slate-100 dark:border-zinc-800 font-bold text-brandBlue uppercase tracking-tighter">
+                                        Geo-Validation</td>
+                                    <td class="p-3 border-b border-slate-100 dark:border-zinc-800">Enable GPS; Refresh
+                                        if Idle</td>
+                                    <td class="p-3 border-b border-slate-100 dark:border-zinc-800">Unlocks 'Submit'
+                                        Gateway</td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        class="p-3 border-b border-slate-100 dark:border-zinc-800 font-bold text-brandBlue uppercase tracking-tighter">
+                                        Verification</td>
+                                    <td class="p-3 border-b border-slate-100 dark:border-zinc-800">Biometric Scan /
+                                        Passkey</td>
+                                    <td class="p-3 border-b border-slate-100 dark:border-zinc-800">Cryptographic Signing
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        class="p-3 border-b border-slate-100 dark:border-zinc-800 font-bold text-brandBlue uppercase tracking-tighter">
+                                        Redundancy</td>
+                                    <td class="p-3 border-b border-slate-100 dark:border-zinc-800">Check 'Recent Logs'
+                                    </td>
+                                    <td class="p-3 border-b border-slate-100 dark:border-zinc-800">Entry Collision
+                                        Highlighting</td>
+                                </tr>
+
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                <div
+                    class="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-dashed border-slate-200 dark:border-zinc-800 text-[10px] italic">
+                    Instruction: In cases where the 'Submit' gateway remains locked despite active GPS, a System Refresh
+                    is required. Refreshing the interface re-initializes the location-tracking engine to ensure total
+                    compliance with institutional security guidelines.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="privacyModal"
+        class="hidden fixed inset-0 z-[2000] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div
+            class="bg-white dark:bg-darkSurface w-full max-w-[95%] md:max-w-xl rounded-[2rem] border border-slate-200 dark:border-darkBorder shadow-2xl overflow-hidden animate-slide-up">
+            <div
+                class="p-6 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center bg-slate-50/50 dark:bg-white/5">
+                <div>
+                    <h3 class="font-black text-xl tracking-tight dark:text-white leading-none">Privacy & Data Ethics
+                    </h3>
+                    <p class="text-[9px] text-brandGreen font-bold uppercase tracking-widest mt-1">Institutional Data
+                        Standard</p>
+                </div>
+                <button onclick="closeModal('privacyModal')"
+                    class="text-slate-400 hover:text-brandRed transition-all transform hover:rotate-90">
+                    <i class="fas fa-times-circle text-2xl"></i>
+                </button>
+            </div>
+
+            <div
+                class="p-8 max-h-[65vh] overflow-y-auto custom-scroll space-y-8 text-sm text-slate-600 dark:text-zinc-400 leading-relaxed">
+
+                <div class="flex items-start gap-4 p-4 rounded-2xl bg-brandGreen/5 border-l-4 border-brandGreen">
+                    <i class="fas fa-shield-halved text-brandGreen text-xl mt-1"></i>
+                    <p class="text-xs font-medium text-brandGreen">This application is designed with "Privacy by Design"
+                        principles. We collect only what is necessary for academic verification.</p>
+                </div>
+
+                <section>
+                    <h4 class="font-black text-slate-900 dark:text-white uppercase text-[11px] mb-3">01. Telemetry Data
+                        Collection</h4>
+                    <p>We process your real-time Latitude and Longitude during the check-in attempt. This data is
+                        converted into a distance vector relative to the classroom coordinates. Precise coordinate
+                        history is <strong>never</strong> recorded; only the "In-Range" or "Out-of-Range" status is
+                        stored in the permanent database.</p>
+                </section>
+
+                <section>
+                    <h4 class="font-black text-slate-900 dark:text-white uppercase text-[11px] mb-3">02. FIDO2 Biometric
+                        Standard</h4>
+                    <p>We utilize the FIDO2 WebAuthn protocol. Your biometric data (fingerprint or face-id) is stored
+                        <strong>exclusively</strong> in your phone's Trusted Execution Environment (TEE). The GECWC
+                        servers only receive a public key signature to verify your identity. No biometric imagery is
+                        transmitted or stored on our servers.
+                    </p>
+                </section>
+
+                <section>
+                    <h4 class="font-black text-slate-900 dark:text-white uppercase text-[11px] mb-3">03. Administrative
+                        Data Access</h4>
+                    <p>Your Roll Number, Name, and Registration details are visible only to authorized faculty members
+                        and the examination department. This data is hosted on Google Cloud Infrastructure with
+                        Restricted IAM access, ensuring protection against unauthorized data leaks.</p>
+                </section>
+
+                <section>
+                    <h4 class="font-black text-slate-900 dark:text-white uppercase text-[11px] mb-3">04.
+                        Secure Autofill</h4>
+                    <p>The Autofill engine utilizes a Hardware-Validated Lookup Protocol. By binding student PII to a
+                        unique hardware fingerprint at the point of ingestion, the system ensures that sensitive data is
+                        only served to verified devices. This architecture effectively mitigates Insecure Direct Object
+                        Reference (IDOR) vulnerabilities common in web-based registration systems.</p>
+                </section>
+
+                <section>
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-black text-slate-900 dark:text-white uppercase text-[11px]">05. Cryptography
+                            Matrix</h4>
+                        <div
+                            class="flex items-center gap-1.5 px-2 py-1 bg-brandGreen/10 border border-brandGreen/20 rounded-lg">
+                            <div class="w-1.5 h-1.5 bg-brandGreen rounded-full animate-pulse"></div>
+                            <span class="text-[7px] font-black text-brandGreen uppercase tracking-widest">Encrypted &
+                                Verified</span>
+                        </div>
+                    </div>
+
+                    <p class="mb-4 text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">The ecosystem employs a
+                        multi-layered cryptographic stack to ensure the
+                        <strong>Confidentiality, Integrity, and Availability (CIA)</strong> of institutional data.
+                        By utilizing asymmetric key pairs and one-way hashing algorithms, the system creates
+                        a tamper-proof environment for attendance logging.
+                    </p>
+
+
+                </section>
+
+                <div class="border-t border-slate-100 dark:border-zinc-800 pt-6 text-[10px] text-slate-400">
+                    Identity architecture is powered by Google Secure Authentication, integrating advanced FIDO2 and
+                    Passkey protocols to establish a robust chain of trust between the user device and the cloud ledger.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-[8px] text-center opacity-30 pb-2">
+        GEC-WC Secure Build: 2026.01.25.V1
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
