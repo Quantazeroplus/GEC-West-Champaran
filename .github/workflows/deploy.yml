@@ -1,4 +1,4 @@
-name: Full Secure & Obfuscate Deploy
+name: Secure & Obfuscate Deploy
 
 on:
   push:
@@ -9,7 +9,7 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write # CRITICAL: Fixes the 403 Permission Denied error
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -22,28 +22,23 @@ jobs:
       - name: Install Obfuscator
         run: npm install -g javascript-obfuscator
 
-      - name: Inject Secret URL into script.js
+      - name: Inject Secret URL
         run: |
-          sed -i "s|PROD_URL_PLACEHOLDER|${{ secrets.GOOGLE_SCRIPT_URL }}|g" script.js
+          # Swap placeholder for the real secret URL from your vault
+          sed -i "s|PROD_URL_PLACEHOLDER|${{ secrets.GOOGLE_SCRIPT_URL }}|g" index.html
 
       - name: Obfuscate & Build
         run: |
           mkdir -p dist
+          # ONLY obfuscate index.html since all your JS is inside it
+          javascript-obfuscator index.html --output dist/index.html --compact true --self-defending true --string-array true --string-array-encoding 'base64' --string-array-threshold 1
           
-          # 1. Scramble script.js (High Security)
-          javascript-obfuscator script.js --output dist/script.js --compact true --self-defending true --string-array true --string-array-encoding 'base64' --string-array-threshold 1
-          
-          # 2. Scramble index.html (This scrambles any remaining inline JS and minifies HTML)
-          javascript-obfuscator index.html --output dist/index.html --compact true --self-defending true
-          
-          # 3. Copy other assets
+          # Copy images and manifest to the production folder
           if [ -d "image" ]; then cp -r image dist/; fi
           if [ -f "manifest.json" ]; then cp manifest.json dist/; fi
-          if [ -f "style.css" ]; then cp style.css dist/; fi
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: dist
+          folder: dist # Deploy the scrambled version from the dist folder
           branch: gh-pages
-          token: ${{ secrets.GITHUB_TOKEN }}
