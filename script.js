@@ -92,7 +92,7 @@ setInterval(async () => {
 }, 3000);
 setInterval(checkPhysicalFloor, 3000);
 
-const PERMANENT_KEY = "GECWC2026";
+const PERMANENT_KEY = "PROD_KEY_PLACEHOLDER";
 
 function checkQRVerification() {
   const urlParams = new URLSearchParams(window.location.search);
