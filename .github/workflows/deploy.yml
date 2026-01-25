@@ -1,41 +1,47 @@
 name: Secure & Obfuscate Deploy
 
 on:
-    push:
-        branches:
-            - main
+  push:
+    branches:
+      - main
 
 jobs:
-    build-and-deploy:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout Code
-              uses: actions/checkout@v3
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v3
-              with:
-                  node-version: "16"
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
 
-            - name: Install Obfuscator
-              run: npm install -g javascript-obfuscator
+      - name: Install Obfuscator
+        run: npm install -g javascript-obfuscator
 
-            - name: Inject Secret URL
-              run: |
-                  # Use '|' as a delimiter in case the URL contains '/'
-                  sed -i "s|PROD_URL_PLACEHOLDER|${{ secrets.GOOGLE_SCRIPT_URL }}|g" index.html
+      - name: Inject Secret URL into script.js
+        run: |
+          # Targeting script.js instead of index.html
+          sed -i "s|PROD_URL_PLACEHOLDER|${{ secrets.GOOGLE_SCRIPT_URL }}|g" script.js
 
-            - name: Obfuscate & Build
-              run: |
-                  # Create the distribution folder
-                  mkdir -p dist
-                  # Scramble the HTML/JS and output it to the dist folder
-                  javascript-obfuscator index.html --output ./dist/index.html --compact true --self-defending true --string-array true --string-array-encoding 'base64' --string-array-threshold 1
-                  # Copy your images folder if you have one, so they show up on the site
-                  cp -r image dist/ || true
+      - name: Obfuscate & Build
+        run: |
+          # 1. Create the output directory
+          mkdir -p dist
+          
+          # 2. Scramble the script.js file
+          javascript-obfuscator script.js --output dist/script.js --compact true --self-defending true --string-array true --string-array-encoding 'base64' --string-array-threshold 1
+          
+          # 3. Copy index.html and images to the dist folder
+          cp index.html dist/
+          if [ -d "image" ]; then cp -r image dist/; fi
+          # If you have other files (manifest.json, sw.js), add them here:
+          if [ -f "manifest.json" ]; then cp manifest.json dist/; fi
+          if [ -f "sw.js" ]; then cp sw.js dist/; fi
 
-            - name: Deploy to GitHub Pages
-              uses: JamesIves/github-pages-deploy-action@v4
-              with:
-                  folder: dist
-                  branch: gh-pages
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: dist
+          branch: gh-pages
