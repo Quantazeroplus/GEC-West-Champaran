@@ -24,19 +24,22 @@ jobs:
 
       - name: Inject Secret URL
         run: |
-          # We now target script.js because that is where your URL placeholder lives
+          # 1. Put the real URL into your script.js placeholder
           sed -i 's|PROD_URL_PLACEHOLDER|${{ secrets.GOOGLE_SCRIPT_URL }}|g' script.js
 
       - name: Obfuscate & Build
         run: |
+          # Create the final distribution folder
           mkdir -p dist
-          # 1. Scramble the script.js and put it in the dist folder
+          
+          # 2. Obfuscate ONLY script.js (keeps logic/URL safe)
           javascript-obfuscator script.js --output dist/script.js --compact true --self-defending true --string-array true --string-array-encoding 'base64' --string-array-threshold 1
           
-          # 2. Copy the index.html to the dist folder (HTML usually doesn't need obfuscation)
+          # 3. Copy index.html and style.css EXACTLY as they are (Restores your design)
           cp index.html dist/index.html
+          cp style.css dist/style.css
           
-          # 3. Copy your other assets
+          # 4. Copy images and other files
           [ -d "image" ] && cp -r image dist/ || echo "No image folder"
           [ -f "manifest.json" ] && cp manifest.json dist/ || echo "No manifest"
           [ -f "sw.js" ] && cp sw.js dist/ || echo "No sw.js"
