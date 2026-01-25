@@ -530,12 +530,10 @@ navigator.geolocation.watchPosition(
           userPos.lat = pos.coords.latitude;
           userPos.lon = pos.coords.longitude;
 
-          
           document.getElementById("gps-text").innerText = "GPS ACTIVE";
           document.getElementById("gps-dot").className =
             "relative inline-flex rounded-full h-2.5 w-2.5 bg-brandGreen";
 
-        
           updateLogic();
         },
         (err) => {
@@ -558,7 +556,6 @@ navigator.geolocation.watchPosition(
     );
     const isScanned = checkQRVerification();
 
- 
     document.getElementById("liveDist").innerHTML =
       `${Math.round(dist)}<span class="text-xl font-medium text-slate-400 dark:text-zinc-600 ml-1">m</span>`;
     const percentage = Math.max(0, 100 - dist * (100 / MAX_DIST));
@@ -611,7 +608,6 @@ navigator.geolocation.watchPosition(
       entryForm.classList.add("hidden");
       lockMsg.classList.remove("hidden");
 
-    
       updateLockUI(
         "VERIFYING FLOOR",
         "Hold phone steady infront of QR",
@@ -702,7 +698,6 @@ document.getElementById("roll").addEventListener("blur", async (e) => {
     document.getElementById("email").value = savedData.email || "";
   }
 
-  
   // 2. Network verification with Privacy Lock (Reading from Logs)
   try {
     const res = await fetch(SCRIPT_URL, {
@@ -782,7 +777,9 @@ document.getElementById("entryForm").addEventListener("submit", async (e) => {
         lon: pos.coords.longitude,
         deviceId: getDeviceId(),
         bioSignature: bioSig,
-        note: document.getElementById("note") ? document.getElementById("note").value : ""
+        note: document.getElementById("note")
+          ? document.getElementById("note").value
+          : "",
       };
 
       try {
@@ -870,7 +867,7 @@ async function getBiometricSignature() {
               type: "public-key",
             },
           ],
-       
+
           userVerification: "required",
         },
       });
@@ -878,7 +875,6 @@ async function getBiometricSignature() {
     }
   } catch (e) {
     console.error("Auth Blocked:", e.name);
-
 
     if (e.name === "NotAllowedError") {
       showNotify("Identity Verification Required. Cannot skip!", "error");
@@ -1124,6 +1120,7 @@ async function updateLiveTimetable() {
     });
 
     // --- 1. HOLIDAY & SUNDAY FEATURE ---
+
     const isSunday = ist.getDay() === 0;
     const holidayInfo =
       data.holidays && data.holidays[todayISO] ? data.holidays[todayISO] : null;
@@ -1134,26 +1131,149 @@ async function updateLiveTimetable() {
 
       const hName = isSunday ? "Sunday Weekly Off" : holidayInfo.name;
       const hType = isSunday ? "Weekend" : holidayInfo.type;
-      const hIcon = isSunday ? "fa-calendar-day" : "fa-umbrella-beach";
+      const lowerHName = hName.toLowerCase();
+
+      const festivalImages = {
+        "new year":
+          "https://img.freepik.com/free-photo/new-year-greeting-artwork_23-2151898894.jpg?semt=ais_hybrid&w=740&q=80",
+        republic:
+          "https://resize.indiatvnews.com/en/resize/gallery/840_-/2026/01/republic-day-hd-images-1769061929.jpg",
+        ravidas:
+          "https://www.fabhotels.com/blog/wp-content/uploads/2020/04/Guru-Ravidas-Jayanti.jpg",
+        dayananda:
+          "https://s.calendarr.com/upload/35/05/maharishi-dayanand-saraswati-jayanti.jpg?auto_optmize=low",
+        shivaratri:
+          "https://nepalirudraksha.com/cdn/shop/articles/Maha-Shivratri-2026_fb98b3e3-3771-4813-aaa9-8d1dcb817010_1200x1200.png?v=1766749076",
+        shivaji:
+          "https://www.decodepedia.in/wp-content/uploads/2023/09/chhatrapati-shivaji-maharaj-maratha-empire.jpg",
+        holi: "https://cdn.britannica.com/57/244757-050-CADDB530/Hindu-Holi-Festival-Mathura-Uttar-Pradesh-India.jpg",
+        Dahan:
+          "https://d3lzcn6mbbadaf.cloudfront.net/media/details/ANI-20230306084030.jpg",
+        vida: "https://zamzam-blog.s3.eu-west-1.amazonaws.com/wp-content/uploads/2022/04/Jamat-ul-Vida-840x450.jpg",
+        eid: "https://wpblogassets.paytm.com/paytmblog/uploads/2025/08/Eid-e-Milad.jpg",
+        "ram navami":
+          "https://navi.com/blog/wp-content/uploads/2022/01/Ram-Navami-2023.jpg",
+        "Mahavir Jayanti":
+          "https://static.toiimg.com/photo/imgsize-23456,msid-120135436/happy-mahavir-jayanti.jpg",
+        "Good Friday":
+          "https://camouflageclicks.com/assets/uploads/blog/10095355.png",
+        "Easter Sunday":
+          "https://i.swncdn.com/media/912w/via/17473-he-is-risen-ccom.jpg",
+
+        "Samarat Ashok Jayanti":
+          "https://d3jbu7vaxvlagf.cloudfront.net/small/v2/category_media/image_17116932674402.jpeg",
+        "Bihar Day":
+          "https://img.jagranjosh.com/images/2024/March/2232024/bihar-diwas.webp",
+        "veer kunwar singh jayanti":
+          "https://images.hindi.news18.com/ibnkhabar/uploads/2022/04/1334167_CON_FB_IMG_1650475758175-165050796816x9.jpg",
+        "Janki-Navami":
+          "https://static.vecteezy.com/system/resources/previews/021/731/450/non_2x/celebration-of-happy-sita-navami-banner-free-vector.jpg",
+        "Id ul Zoha":
+          "https://www.fabhotels.com/blog/wp-content/uploads/2023/06/Eid-al-Adha-2023.jpg",
+        "summer vacation":
+          "https://toshouse.nyc3.digitaloceanspaces.com/uploads/2018/06/Summer-Vacation-tosblog.jpg",
+        Chehlum:
+          "https://images.tv9hindi.com/wp-content/uploads/2024/08/chehlum.jpg?w=1280",
+
+        " Dr. Ambedkar Jayanti":
+          "https://currentaffairs.adda247.com/wp-content/uploads/multisite/sites/5/2022/04/14070057/ambedkar-jayanti-history.jpg",
+        "Buddha Purnima":
+          "https://www.livehindustan.com/lh-img/smart/img/2025/05/11/1200x900/buddha_purnima_wishes_1716423688818_1746968590825.jpg",
+        "Rabindranath Tagore Jayanti":
+          "https://images.news18.com/ibnlive/uploads/2021/05/1620364266_rabindranath-tagore1.jpg",
+        "Shab-e-Barat":
+          "https://resize.indiatvnews.com/en/resize/newbucket/1200_-/2024/02/befunky-collage-63-1708836488.jpg",
+        independence:
+          "https://blogcdn.aakash.ac.in/wordpress_media/2022/08/Blog-Image-14.jpg",
+        "Id-e-Milad":
+          "https://www.creativehatti.com/wp-content/uploads/2021/10/Eid-e-milad-mubarak-banner-template-01-small.jpg",
+        "Raksha Bandhan":
+          "https://images.moneycontrol.com/static-mcnews/2024/08/20240808074846_Daily-Horoscope-6.png?impolicy=website&width=1600&height=900",
+        janmashtami:
+          "https://ommcomnews.com/wp-content/uploads/2024/08/janmashtami.jpg",
+        "Mahatma Gandhi Jayanti":
+          "https://blog.woodenstreet.com/images/data/image_upload/1758370074Mahatma-%20Gandhi-Jayanti.jpg",
+
+        Navratri:
+          "https://artium-v2-blogs.s3.ap-south-1.amazonaws.com/wp-content/uploads/2025/09/10-Navratri-Songs-That-Deserve-a-Spot-on-Your-Playlist-in-2025-scaled.webp",
+        "Maha Saptami":
+          "https://thumbs.dreamstime.com/b/vector-maha-saptami-poster-template-indian-festival-vector-maha-saptami-poster-template-indian-festival-flat-design-398751998.jpg",
+        "Maha Ashtami":
+          "https://images.moneycontrol.com/static-mcnews/2025/09/20250929124250_Happy-Durga-Maha-Ashtami-2025-Images.png?impolicy=website&width=1600&height=900",
+        Dussehra:
+          "https://static.bankbazaar.com/images/india/infographic/dussehra-holidays.webp",
+        diwali:
+          "https://d1msew97rp2nin.cloudfront.net/prod/phool/blogimages/1727296604765why-is-diwali-called-the-festival-of-lights.webp",
+        "Govardhan Puja":
+          "https://images.financialexpressdigital.com/2023/11/goverdhan-puja.jpg",
+        "chitragupta puja":
+          "https://www.mypoojabox.in/cdn/shop/articles/chitra_lead_8cb64ac9-21a1-48b9-b641-35a247f6b772.jpg?v=1724993999",
+        "Bhai Dooj":
+          "https://www.olyv.co.in/wp-content/uploads/bhai-dooj-scaled.jpg",
+
+        chhath:
+          "https://aanchalikkhabre.com/wp-content/uploads/2024/11/Untitled-design-63.png",
+        "Guru Nanak's ":
+          "https://images.livemint.com/img/2022/11/08/original/1600x960_1319539-happy-gurunanak-jayanti-202_1667869202282.jpg",
+        christmas:
+          "https://www.neweleven.co/cdn/shop/articles/Facts-about-Chrismtas.png?v=1698829553&width=1920",
+      };
+
+      let finalImg =
+        "https://www.corbettnationalpark.in/blog/wp-content/uploads/2025/04/Summer-Holidays.png";
+      for (let key in festivalImages) {
+        if (lowerHName.includes(key)) {
+          finalImg = festivalImages[key];
+          break;
+        }
+      }
+      if (isSunday)
+        finalImg =
+          "https://kalingatv.com/wp-content/uploads/2024/03/sunday.jpg";
 
       ongoingSection.innerHTML = `
-                <div class="relative overflow-hidden bg-white dark:bg-zinc-950 p-8 rounded-[2.5rem] border-2 border-amber-500/20 shadow-2xl text-center animate-slide-up">
-                    <div class="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/10 blur-[50px] rounded-full"></div>
-                    <div class="relative z-10">
-                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 bg-amber-500/10 border border-amber-500/30">
-                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                            <span class="text-[9px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-500">${hType}</span>
-                        </div>
-                        <div class="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
-                            <i class="fas ${hIcon} text-amber-500 text-3xl"></i>
-                        </div>
-                        <h3 class="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em] mb-1">${displayDate}</h3>
-                        <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">${hName}</h2>
-                        <div class="mt-4 pt-4 border-t border-slate-100 dark:border-zinc-800">
-                            <p class="text-slate-500 dark:text-zinc-400 text-xs font-medium">No classes scheduled today. Enjoy your break!</p>
-                        </div>
-                    </div>
-                </div>`;
+    <div class="festival-card-compact relative overflow-hidden bg-white dark:bg-zinc-950 px-4 pt-3 pb-6 rounded-[2.5rem] border border-slate-200 dark:border-white/10 shadow-2xl text-center animate-slide-up">
+        <div class="relative z-10 flex flex-col items-center">
+            
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-3 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                <span class="text-[8px] font-black uppercase tracking-[0.2em] opacity-70">${hType}</span>
+            </div>
+            
+            <div class="w-full h-44 md:h-72 bg-zinc-900 rounded-[2.2rem] overflow-hidden border border-white/10 shadow-2xl relative group flex items-center justify-center">
+                <img src="${finalImg}" class="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-110 rounded-[2.2rem]">
+                <img src="${finalImg}" class="relative z-10 max-w-[90%] max-h-[88%] object-contain rounded-[1.8rem] shadow-2xl transition-all duration-[5s] group-hover:scale-105" style="animation: float-perfect 6s ease-in-out infinite;">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent rounded-[2.2rem]"></div>
+            </div>
+
+            <div class="wish-pill mx-auto">
+                <h3 class="text-slate-500 dark:text-zinc-500 font-bold text-[8px] uppercase tracking-[0.3em] mb-0.5">${displayDate}</h3>
+                <h2 class="festival-title-compact font-black uppercase tracking-tighter">${hName}</h2>
+                <p style="font-family: 'Dancing Script', cursive;" class="text-xl md:text-3xl text-amber-600 dark:text-amber-500 font-bold mt-1">
+                    Happy ${hName}!
+                </p>
+            </div>
+
+            <div class="mt-4 px-4 py-1.5 rounded-xl bg-amber-500/5 border border-amber-500/10">
+                <p style="font-family: 'Playfair Display', serif;" class="text-[9px] md:text-xs text-slate-500 dark:text-zinc-400 italic">
+                   Your class is not scheduled today
+                </p>
+            </div>
+        </div>
+    </div>`;
+
+      // Confetti logic...
+      const lastTrigger = localStorage.getItem("last_celebration_time");
+      if (!lastTrigger || Date.now() - lastTrigger > 60000) {
+        localStorage.setItem("last_celebration_time", Date.now());
+        confetti({
+          particleCount: 120,
+          spread: 80,
+          origin: { y: 0.8 },
+          colors: ["#fbbf24", "#2563eb", "#10b981", "#ffffff"],
+          scalar: 0.8,
+        });
+      }
       return;
     }
 
@@ -1590,17 +1710,14 @@ function launchIntegratedGoogle() {
   const isAndroid = /Android/i.test(navigator.userAgent);
 
   if (isAndroid) {
-   
     const directLensIntent = "googlelens://v1/scan";
 
     // This is the backup Android Intent if the URI scheme is blocked
     const intentURL =
       "intent://scan/#Intent;scheme=googlelens;package=com.google.ar.lens;end";
 
-
     window.location.href = directLensIntent;
 
-   
     setTimeout(() => {
       if (document.hasFocus()) {
         window.location.href = intentURL;
@@ -1634,7 +1751,7 @@ function triggerSuccessFeedback(studentName) {
 
     // --- THE "HUMAN" TUNING ---
     msg.rate = 0.9;
-    msg.pitch = 1.2; 
+    msg.pitch = 1.2;
     msg.volume = 1;
 
     // --- VOICE SELECTION ---
