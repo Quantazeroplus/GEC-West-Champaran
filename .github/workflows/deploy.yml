@@ -3,13 +3,13 @@ name: Secure & Obfuscate Deploy
 on:
   push:
     branches:
-      - main
+      - main # Change to 'master' if your default branch is named master
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # CRITICAL: Fixes the 403 Permission Denied error
+      contents: write # Essential to fix the 'Permission Denied 403' error
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -17,28 +17,36 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: "18"
 
       - name: Install Obfuscator
         run: npm install -g javascript-obfuscator
 
       - name: Inject Secret URL
         run: |
-          # Swap placeholder for the real secret URL from your vault
+          # This swaps the placeholder in BOTH files with your GitHub Secret
           sed -i "s|PROD_URL_PLACEHOLDER|${{ secrets.GOOGLE_SCRIPT_URL }}|g" index.html
+          sed -i "s|PROD_URL_PLACEHOLDER|${{ secrets.GOOGLE_SCRIPT_URL }}|g" script.js
 
       - name: Obfuscate & Build
         run: |
           mkdir -p dist
-          # ONLY obfuscate index.html since all your JS is inside it
-          javascript-obfuscator index.html --output dist/index.html --compact true --self-defending true --string-array true --string-array-encoding 'base64' --string-array-threshold 1
-          
-          # Copy images and manifest to the production folder
+
+          # 1. Scramble index.html (handles inline scripts)
+          javascript-obfuscator index.html --output dist/index.html --compact true --self-defending true --string-array true --string-array-encoding 'base64'
+
+          # 2. Scramble script.js (handles your main logic)
+          javascript-obfuscator script.js --output dist/script.js --compact true --self-defending true --string-array true --string-array-encoding 'base64'
+
+          # 3. Copy Assets (Images, Manifest, Service Worker)
+          # These are not scrambled, just copied to the final folder
           if [ -d "image" ]; then cp -r image dist/; fi
           if [ -f "manifest.json" ]; then cp manifest.json dist/; fi
+          if [ -f "sw.js" ]; then cp sw.js dist/; fi
+          if [ -f "style.css" ]; then cp style.css dist/; fi
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: dist # Deploy the scrambled version from the dist folder
-          branch: gh-pages
+          folder: dist # Only the scrambled files from 'dist' go live
+          branch: gh-pages # GitHub will host your site from this branch
