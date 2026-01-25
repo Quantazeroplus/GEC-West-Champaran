@@ -1,4 +1,4 @@
-name: Secure & Obfuscate Deploy
+name: Full Secure & Obfuscate Deploy
 
 on:
   push:
@@ -8,6 +8,8 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -22,26 +24,26 @@ jobs:
 
       - name: Inject Secret URL into script.js
         run: |
-          # Targeting script.js instead of index.html
           sed -i "s|PROD_URL_PLACEHOLDER|${{ secrets.GOOGLE_SCRIPT_URL }}|g" script.js
 
       - name: Obfuscate & Build
         run: |
-          # 1. Create the output directory
           mkdir -p dist
           
-          # 2. Scramble the script.js file
+          # 1. Scramble script.js (High Security)
           javascript-obfuscator script.js --output dist/script.js --compact true --self-defending true --string-array true --string-array-encoding 'base64' --string-array-threshold 1
           
-          # 3. Copy index.html and images to the dist folder
-          cp index.html dist/
+          # 2. Scramble index.html (This scrambles any remaining inline JS and minifies HTML)
+          javascript-obfuscator index.html --output dist/index.html --compact true --self-defending true
+          
+          # 3. Copy other assets
           if [ -d "image" ]; then cp -r image dist/; fi
-          # If you have other files (manifest.json, sw.js), add them here:
           if [ -f "manifest.json" ]; then cp manifest.json dist/; fi
-          if [ -f "sw.js" ]; then cp sw.js dist/; fi
+          if [ -f "style.css" ]; then cp style.css dist/; fi
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
           branch: gh-pages
+          token: ${{ secrets.GITHUB_TOKEN }}
