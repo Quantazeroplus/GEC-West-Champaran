@@ -1,5 +1,4 @@
-const SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbyrwZsXdVRvz1kOmBu9WeVu7lwSbNaKJB8PgfvX1jCFEwgck-QMLgjoKJOUm1--0dr_CQ/exec";
+const SCRIPT_URL = "PROD_URL_PLACEHOLDER";
 const CLASS_COORDS = { lat: 26.874445, lng: 84.510308 };
 const MAX_DIST = 350;
 let currentLockState = "";

@@ -1,0 +1,41 @@
+name: Secure & Obfuscate Deploy
+
+on:
+    push:
+        branches:
+            - main
+
+jobs:
+    build-and-deploy:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v3
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: "16"
+
+            - name: Install Obfuscator
+              run: npm install -g javascript-obfuscator
+
+            - name: Inject Secret URL
+              run: |
+                  # Use '|' as a delimiter in case the URL contains '/'
+                  sed -i "s|PROD_URL_PLACEHOLDER|${{ secrets.GOOGLE_SCRIPT_URL }}|g" index.html
+
+            - name: Obfuscate & Build
+              run: |
+                  # Create the distribution folder
+                  mkdir -p dist
+                  # Scramble the HTML/JS and output it to the dist folder
+                  javascript-obfuscator index.html --output ./dist/index.html --compact true --self-defending true --string-array true --string-array-encoding 'base64' --string-array-threshold 1
+                  # Copy your images folder if you have one, so they show up on the site
+                  cp -r image dist/ || true
+
+            - name: Deploy to GitHub Pages
+              uses: JamesIves/github-pages-deploy-action@v4
+              with:
+                  folder: dist
+                  branch: gh-pages
