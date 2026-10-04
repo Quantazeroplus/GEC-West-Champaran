@@ -478,7 +478,8 @@ const map = L.map("map", {
   attributionControl: false,
 }).setView([CLASS_COORDS.lat, CLASS_COORDS.lng], 19);
 L.tileLayer(
-  "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  { maxZoom: 19 }
 ).addTo(map);
 
 L.circle([CLASS_COORDS.lat, CLASS_COORDS.lng], {
